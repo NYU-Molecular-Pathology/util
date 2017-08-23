@@ -31,11 +31,11 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
         for item in find_gen(search_dir = search_dir, inclusion_patterns = inclusion_patterns, exclusion_patterns = exclusion_patterns, search_type = search_type, level_limit = level_limit, match_mode = match_mode):
             if len(matches) <= int(num_limit):
                 matches.append(item)
-        logger.debug("Matches found: {0}".format(matches))
+        # logger.debug("Matches found: {0}".format(matches))
         return(matches)
     else:
         matches = [item for item in find_gen(search_dir = search_dir, inclusion_patterns = inclusion_patterns, exclusion_patterns = exclusion_patterns, search_type = search_type, level_limit = level_limit, match_mode = match_mode)]
-        logger.debug("Matches found: {0}".format(matches))
+        # logger.debug("Matches found: {0}".format(matches))
         return(matches)
 
 def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), search_type = 'all', level_limit = None, match_mode = "any"):
@@ -49,7 +49,7 @@ def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), s
     search_dir = search_dir.rstrip(os.path.sep)
     # assert os.path.isdir(search_dir)
     num_sep = search_dir.count(os.path.sep)
-    logger.debug("Searching {0} for {1} matching {2}, level limit: {3}".format(search_dir, search_type, inclusion_patterns, level_limit))
+    # logger.debug("Searching {0} for {1} matching {2}, level limit: {3}".format(search_dir, search_type, inclusion_patterns, level_limit))
     for root, dirs, files in os.walk(search_dir):
         # choose which items to search
         if search_type == 'all':
@@ -101,11 +101,11 @@ def multi_filter(names, patterns, match_mode = "any"):
         elif patterns:
             if match_mode == 'any':
                 if any(fnmatch.fnmatch(basename, pattern) for pattern in patterns):
-                    logger.debug("match found")
+                    # logger.debug("match found")
                     yield(name)
             elif match_mode == 'all':
                 if all(fnmatch.fnmatch(basename, pattern) for pattern in patterns):
-                    logger.debug("match found")
+                    # logger.debug("match found")
                     yield(name)
             #
             # for pattern in patterns:
