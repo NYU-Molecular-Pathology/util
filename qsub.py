@@ -21,7 +21,7 @@ try:
     from sh import qstat
 except:
     logger.error("qstat could not be loaded")
-
+import tools as t
 
 # ~~~~ GLOBALS ~~~~~~ #
 # possible qsub job states; default is None
