@@ -34,8 +34,12 @@ class SubprocessCmd(object):
         '''
         if not command:
             command = self.command
-        self.process = sp.Popen(command, stdout = sp.PIPE, shell = True, universal_newlines = True)
-        self.proc_stdout = self.process.communicate()[0].strip()
+        if command:
+            self.process = sp.Popen(command, stdout = sp.PIPE, shell = True, universal_newlines = True)
+            self.proc_stdout = self.process.communicate()[0].strip()
+        else:
+            logger.error('No command supplied')
+        return(self)
 
 
 class DirHop(object):
