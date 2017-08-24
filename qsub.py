@@ -145,13 +145,15 @@ class Job(object):
         return(self.is_present)
 
 
-def submit(*args, **kwargs):
+def submit(verbose = False, *args, **kwargs):
     '''
     Main function for submitting a qsub job
     passes args to 'submit_job'
     returns a Jobs object for the job
+
+    job = submit(command = '', ...)
     '''
-    proc_stdout = submit_job(*args, **kwargs)
+    proc_stdout = submit_job(return_stdout = True, verbose = verbose, *args, **kwargs)
     job_id, job_name = get_job_ID_name(proc_stdout)
     job = Job(id = job_id, name = job_name)
     return(job)
@@ -186,8 +188,8 @@ def get_job_ID_name(proc_stdout):
 def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = None):
     '''
     Basic format for job submission to the SGE cluster with qsub
+    using a bash heredoc format
     '''
-    # bash terminal command template using heredoc
     qsub_command = '''
 qsub {0} -N {1} -o :{2}/ -e :{3}/ <<E0F
 {4}
@@ -204,7 +206,7 @@ command,
 post_commands
 )
     if verbose == True:
-        logger.debug('Command is:\n{0}'.format(qsub_command))
+        logger.debug('qsub command is:\n{0}'.format(qsub_command))
 
     # submit the job
     proc_stdout = subprocess_cmd(command = qsub_command, return_stdout = True)
