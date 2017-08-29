@@ -60,3 +60,99 @@ class LoggedObject(object):
         return(self.id)
     def __len__(self):
         return(len(self.id))
+
+
+class AnalysisItem(LoggedObject):
+    '''
+    Base class for objects associated with a data analysis
+    '''
+    def __init__(self, id, extra_handlers = None):
+        LoggedObject.__init__(self, id = id, extra_handlers = extra_handlers)
+        self.id = id
+        # a dictionary of files associated with the item
+        self.files = defaultdict(list)
+        # a dictionary of dirs associated with the item
+        self.dirs = defaultdict(list)
+
+    def list_none(self, l):
+        '''
+        return None for an empty list, or the first element of a list
+        convenience function for dealing with object's file lists
+        '''
+        if len(l) == 0:
+            return(None)
+        elif len(l) > 0:
+            return(l[0])
+
+    def set_dir(self, name, path):
+        '''
+        Add a single dir to the analysis object's 'dirs' dict
+        name = dict key
+        path = dict value
+        '''
+        if isinstance(path, str):
+            self.dirs[name] = [os.path.abspath(path)]
+        else:
+            self.dirs[name] = [os.path.abspath(p) for p in path]
+
+    def set_dirs(self, name, paths_list):
+        '''
+        Add dirs to the analysis object's 'dirs' dict
+        name = dict key
+        paths_list = list of file paths
+        '''
+        self.set_dir(name = name, path = paths_list)
+
+    def set_file(self, name, path):
+        '''
+        Add a single file to the analysis object's 'files' dict
+        name = dict key
+        path = dict value
+        '''
+        if isinstance(path, str):
+            self.files[name] = [os.path.abspath(path)]
+        else:
+            self.files[name] = [os.path.abspath(p) for p in path]
+
+    def set_files(self, name, paths_list):
+        '''
+        Add a file to the analysis object's 'files' dict
+        name = dict key
+        paths_list = list of file paths
+        '''
+        # self.files[name] = [os.path.abspath(path) for path in paths_list]
+        self.set_file(name = name, path = paths_list)
+
+    def add_file(self, name, path):
+        '''
+        Add a file to the analysis object's 'files' dict
+        name = dict key
+        paths_list = list of file paths
+        '''
+        self.files[name].append(os.path.abspath(path))
+
+
+    def add_files(self, name, paths_list):
+        '''
+        Add a file to the analysis object's 'files' dict
+        name = dict key
+        paths_list = list of file paths
+        '''
+        for path in paths_list:
+            self.files[name].append(os.path.abspath(path))
+
+    def get_files(self, name):
+        '''
+        Retrieve a file by name from the object's 'files' dict
+        name = dict key
+        i = index entry in file list
+        '''
+        return(self.files[name])
+
+    def get_dirs(self, name):
+        '''
+        Retrieve a file by name from the object's 'files' dict
+        name = dict key
+        i = index entry in file list
+        '''
+        return(self.dirs[name])

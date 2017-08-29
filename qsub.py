@@ -21,15 +21,16 @@ try:
     from sh import qstat
 except:
     logger.error("qstat could not be loaded")
-
+import tools as t
 
 # ~~~~ GLOBALS ~~~~~~ #
 # possible qsub job states; default is None
 job_state_key = defaultdict(lambda: None)
-job_state_key['Eqw'] = 'Error'
+job_state_key['Eqw'] = 'Error' # job in error status that never started running
 job_state_key['r'] = 'Running'
-job_state_key['qw'] = 'Waiting'
-job_state_key['t'] = None
+job_state_key['qw'] = 'Waiting' # 'queue wait' job waiting to run
+job_state_key['t'] = None # ???
+job_state_key['dr'] = None # running jobs submitted for deletion
 
 
 # ~~~~ CUSTOM CLASSES ~~~~~~ #
@@ -97,6 +98,15 @@ class Job(object):
             is_running = True
         return(is_running)
 
+    def get_is_error(self, state, job_state_key):
+        '''
+        Check if the job is considered to in an error state
+        '''
+        is_running = False
+        if state in ['Error']:
+            is_running = True
+        return(is_running)
+
     def get_is_present(self, id, entry = None, qstat_stdout = None):
         '''
         Find out if a job is present in qsub
@@ -117,6 +127,7 @@ class Job(object):
         self.status = self.get_status(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
         self.state = self.get_state(status = self.status, job_state_key = self.job_state_key)
         self.is_running = self.get_is_running(state = self.state, job_state_key = self.job_state_key)
+        self.is_error = self.get_is_error(state = self.state, job_state_key = self.job_state_key)
         self.is_present = self.get_is_present(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
 
     def _debug_update(self, qstat_stdout):
@@ -137,6 +148,13 @@ class Job(object):
         self._update()
         return(self.is_running)
 
+    def error(self):
+        '''
+        Return the most recent error state of the job
+        '''
+        self._update()
+        return(self.is_error)
+
     def present(self):
         '''
         Return the most recent presence or absence of the job
@@ -145,13 +163,15 @@ class Job(object):
         return(self.is_present)
 
 
-def submit(*args, **kwargs):
+def submit(verbose = False, *args, **kwargs):
     '''
     Main function for submitting a qsub job
     passes args to 'submit_job'
     returns a Jobs object for the job
+
+    job = submit(command = '', ...)
     '''
-    proc_stdout = submit_job(*args, **kwargs)
+    proc_stdout = submit_job(return_stdout = True, verbose = verbose, *args, **kwargs)
     job_id, job_name = get_job_ID_name(proc_stdout)
     job = Job(id = job_id, name = job_name)
     return(job)
@@ -186,8 +206,8 @@ def get_job_ID_name(proc_stdout):
 def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = None):
     '''
     Basic format for job submission to the SGE cluster with qsub
+    using a bash heredoc format
     '''
-    # bash terminal command template using heredoc
     qsub_command = '''
 qsub {0} -N {1} -o :{2}/ -e :{3}/ <<E0F
 {4}
@@ -204,7 +224,7 @@ command,
 post_commands
 )
     if verbose == True:
-        logger.debug('Command is:\n{0}'.format(qsub_command))
+        logger.debug('qsub command is:\n{0}'.format(qsub_command))
 
     # submit the job
     proc_stdout = subprocess_cmd(command = qsub_command, return_stdout = True)
@@ -216,6 +236,121 @@ post_commands
         return(proc_stdout)
     elif return_stdout == False:
         logger.debug(proc_stdout)
+
+
+
+def monitor_jobs(jobs = None, kill_err = True):
+    '''
+    Monitor a list of qsub Job objects for completion
+    make sure that all jobs are present in the qstat output
+    if a job is absent or is in error state, remove it from the list of jobs
+    wait until the list of jobs reaches 0
+
+    this function does not actually check to make sure the jobs are 'running', only that they are present/absent
+    and that they aren't in error state
+
+    if a job is present and not in error state, it is assumed to either be 'qw' waiting to run,
+    or 'r' running, in both cases it will eventually finish and leave the queue
+
+    jobs in 'Eqw' error state are stuck and will not leave on their own so must be removed and killed ourselves
+
+    jobs is a list of qsub Job objects
+    kill_err = kill Jobs left in error state
+    '''
+    # make sure jobs were passed
+    if not jobs or len(jobs) < 1:
+        logger.error('No jobs to monitor')
+        return()
+    # make sure jobs is a list
+    if not isinstance(jobs, list):
+        logger.error('"jobs" passed is not a list')
+        return()
+
+    # jobs in error state; won't finish
+    err_jobs = []
+    num_jobs = len(jobs)
+    logger.info('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
+    while num_jobs > 0:
+        # check number of jobs in the list
+        if num_jobs != len(jobs):
+            num_jobs = len(jobs)
+            logger.debug("Number of jobs in queue: {0}".format(num_jobs))
+        # check each job for presence & error state
+        for i, job in enumerate(jobs):
+            if not job.present():
+                jobs.remove(job)
+            if job.error():
+                err_jobs.append(jobs.pop(i))
+        sleep(5)
+    logger.info('No jobs remaining in the job queue')
+
+    # check if there were any jobs left in error state
+    if err_jobs:
+        logger.error('{0} jobs left were left in error state. Jobs: {1}'.format(len(err_jobs), [job.id for job in err_jobs]))
+        # kill the error jobs with the 'qdel' command
+        if kill_err:
+            logger.debug('Killing jobs left in error state')
+            qdel_command = 'qdel {0}'.format(' '.join([job.id for job in err_jobs]))
+            cmd = t.SubprocessCmd(command = qdel_command).run()
+            logger.debug(cmd.proc_stdout)
+    return()
+
+
+
+def old_job_monitor(jobs):
+    '''
+    Another method for watching jobs
+    I dont like this one as much but it seemed to work and gives info on whether the jobs are running or not
+    but too much logic too easy to cause bugs
+    '''
+    # if there are no jobs, exit the function
+    if len(jobs) < 1:
+        logger.error('No qsub jobs are present in queue for task')
+        return()
+
+    # TODO: debug here
+    # wait for start
+    logger.debug('Waiting for all jobs to start running...')
+    # logger.debug([job.running() for job in jobs])
+    # logger.debug(all([job.running() for job in jobs]))
+    while not all([job.running() for job in jobs]):
+        sleep(1)
+        # make sure the jobs did not die
+        logger.debug('checking jobs present...')
+        # logger.debug([not job.present() for job in jobs])
+        # logger.debug(all([not job.present() for job in jobs]))
+        if all([not job.present() for job in jobs]):
+            logger.warning('All jobs exited while waiting for jobs to start')
+            break
+    # wait for jobs to finish
+    # make sure there's at least 1 job running
+    logger.debug('Checking if any jobs are still running...')
+    # logger.debug([job.running() for job in jobs])
+    # logger.debug(any([job.running() for job in jobs]))
+    if any([job.running() for job in jobs]):
+        logger.debug('Waiting for all jobs to finish...')
+        # logger.debug([job.running() for job in jobs])
+        # logger.debug(any([job.running() for job in jobs]))
+        while any([job.running() for job in jobs]):
+            sleep(5)
+    # jobs are all done
+    if not any([job.running() for job in jobs]) and not any([job.present() for job in jobs]):
+        logger.debug('No jobs remaining in the job queue')
+    elif not any([job.running() for job in jobs]) and any([job.present() for job in jobs]):
+        logger.warning('Some jobs are remaining in the job queue but are not running')
+    return()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

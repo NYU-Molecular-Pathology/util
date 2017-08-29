@@ -111,6 +111,16 @@ def add_handlers(logger, handlers):
     return(logger)
 
 
+def print_filehandler_filepaths_to_log(logger):
+    '''
+    Make a log entry with the paths to each filehanlder in the logger
+    '''
+    for h in logger.__dict__['handlers']:
+        if h.__class__.__name__ == 'FileHandler':
+            logname = h.get_name()
+            log_file = h.baseFilename
+            logger.info('"{0}" log filepath: {1}'.format(logname, log_file))
+
 def build_logger(name, level = logging.DEBUG, log_format = '[%(asctime)s] (%(name)s:%(funcName)s:%(lineno)d:%(levelname)s) %(message)s'):
     '''
     Create a basic logger instance
