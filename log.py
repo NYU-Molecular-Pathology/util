@@ -48,6 +48,16 @@ def logger_filepath(logger, handler_name):
                 log_file = h.baseFilename
     return(log_file)
 
+def log_all_handler_filepaths(logger):
+    '''
+    Adds Info log messages for all filepaths for all file handlers
+    '''
+    for h in logger.__dict__['handlers']:
+        if h.__class__.__name__ == 'FileHandler':
+            logname = h.get_name()
+            log_file = h.baseFilename
+            logger.info('Path to {0} log file: {1}'.format(logname, log_file))
+
 def get_logger_handler(logger, handler_name, handler_type = 'FileHandler'):
     '''
     Get the filehander object from a logger

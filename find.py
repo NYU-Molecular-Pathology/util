@@ -23,6 +23,7 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
     num_limit is the number of matches to return; use None for no limit
     level_limit is the number of directory levels to recurse; 0 is parent dir only
     match_mode is 'any' or 'all'; match any of the provided inclusion_patterns, or all of them
+    search_type = 'all', 'file', or 'dir'; type of items to find
     '''
     import sys
     import itertools
