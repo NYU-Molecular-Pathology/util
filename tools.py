@@ -35,8 +35,11 @@ class SubprocessCmd(object):
         if not command:
             command = self.command
         if command:
-            self.process = sp.Popen(command, stdout = sp.PIPE, shell = True, universal_newlines = True)
-            self.proc_stdout = self.process.communicate()[0].strip()
+            self.process = sp.Popen(command, stdout = sp.PIPE, stderr = sp.PIPE, shell = True, universal_newlines = True)
+            self.proc_stdout, self.proc_stderr = self.process.communicate()
+            self.proc_stdout = self.proc_stdout.strip()
+            self.proc_stderr = self.proc_stderr.strip()
+
         else:
             logger.error('No command supplied')
         return(self)
