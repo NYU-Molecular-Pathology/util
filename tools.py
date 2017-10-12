@@ -39,7 +39,6 @@ class SubprocessCmd(object):
             self.proc_stdout, self.proc_stderr = self.process.communicate()
             self.proc_stdout = self.proc_stdout.strip()
             self.proc_stderr = self.proc_stderr.strip()
-
         else:
             logger.error('No command supplied')
         return(self)
