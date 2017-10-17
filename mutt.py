@@ -20,6 +20,7 @@ import sys
 import os
 import subprocess as sp
 import argparse
+import getpass
 
 # ~~~~ CUSTOM FUNCTIONS ~~~~~~ #
 def subprocess_cmd(command):
@@ -54,6 +55,15 @@ def get_file_contents(file):
         for line in f:
             lines_list.append(line)
     return(''.join(lines_list))
+
+def get_reply_to_address(server):
+    '''
+    Get the email address to use for the 'reply to' field in the email
+    needs to be supplied with a server name
+    '''
+    username = getpass.getuser()
+    address = username + '@' + server
+    return(address)
 
 def mutt_mail(recipient_list, reply_to = '', subject_line = '[mutt.py]', message = '~ This message was sent by the mutt.py email script ~', message_file = None, attachment_files = [], return_only_mode = False, quiet = False):
     '''
