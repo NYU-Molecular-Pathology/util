@@ -121,7 +121,7 @@ def print_filehandler_filepaths_to_log(logger):
             log_file = h.baseFilename
             logger.info('"{0}" log filepath: {1}'.format(logname, log_file))
 
-def build_logger(name, level = logging.DEBUG, log_format = '[%(asctime)s] (%(name)s:%(funcName)s:%(lineno)d:%(levelname)s) %(message)s'):
+def build_logger(name, level = logging.DEBUG, log_format = '[%(asctime)s] %(levelname)s (%(name)s:%(funcName)s:%(lineno)d) %(message)s'):
     '''
     Create a basic logger instance
     Only add console handler by default
