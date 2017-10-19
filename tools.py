@@ -7,6 +7,7 @@ General utility functions and classes for the program
 import sys
 import os
 import csv
+import getpass
 import subprocess as sp
 import logging
 logger = logging.getLogger("tools")
@@ -201,7 +202,6 @@ def reply_to_address(servername, username = None):
     '''
     Get the email address to use for the 'reply to' field in emails
     '''
-    import getpass
     if not username:
         username = getpass.getuser()
     address = username + '@' + servername
@@ -210,6 +210,7 @@ def reply_to_address(servername, username = None):
 def num_lines(input_file, skip = 0):
     '''
     Count the number of lines in a file
+    TODO: add tests for this one
     '''
     with open(input_file, 'r') as f:
         lines = f.read()
@@ -223,6 +224,7 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t'):
     Write out all the entries in 'file1' that are found in the 'ref_file'
     save entries to the output_file
     both 'file1' and 'ref_file' must have headers in common
+    TODO: add tests for this one
     '''
     # the column names from the files to preserve their order for writing
     ref_colnames = None
