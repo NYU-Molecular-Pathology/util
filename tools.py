@@ -243,10 +243,10 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t'):
         # get the columns names from the ref file
         if not ref_colnames:
             ref_colnames = ref_reader.fieldnames
-        # get the column names from the sample annotation file
+        # get the column names from the file1
         if not file1_colnames:
             file1_colnames = file1_reader.fieldnames
-        # get the hapmap ref variants
+        # get the ref file contents
         ref_entries = [row for row in ref_reader]
         # setup output file
         write_out = csv.DictWriter(file_out, fieldnames = file1_colnames, delimiter = delim)
