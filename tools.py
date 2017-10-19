@@ -7,6 +7,7 @@ General utility functions and classes for the program
 import sys
 import os
 import csv
+import json
 import getpass
 import subprocess as sp
 import logging
@@ -142,7 +143,6 @@ def backup_file(input_file, return_path=False, sys_print = False, use_logger = N
     backup a file by moving it to a folder called 'old' and appending a timestamp
     use_logger is a logger object to log to
     '''
-    import os
     if use_logger:
         logger = use_logger
     if os.path.isfile(input_file):
@@ -162,24 +162,31 @@ mv {0} {1}
         return input_file
 
 def print_json(object):
-    import json
     logger.debug(json.dumps(object, sort_keys=True, indent=4))
 
 def json_dumps(object):
-    import json
     return(json.dumps(object, sort_keys=True, indent=4))
 
 
 def write_json(object, output_file):
-    import json
     with open(output_file,"w") as f:
         json.dump(object, f, sort_keys=True, indent=4)
 
 def load_json(input_file):
-    import json
     with open(input_file,"r") as f:
         my_item = json.load(f)
     return my_item
+
+def update_json(data, input_file):
+    '''
+    Add new data to an existing JSON file, or create the file if it doesnt exist
+    '''
+    if not item_exists(item = input_file):
+        write_json(object = data, output_file = input_file)
+    else:
+        old_data = load_json(input_file)
+        old_data.update(data)
+        write_json(object = old_data, output_file = input_file)
 
 def item_exists(item, item_type = 'any', n = False):
     '''
