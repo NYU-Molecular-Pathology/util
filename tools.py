@@ -6,6 +6,7 @@ General utility functions and classes for the program
 '''
 import sys
 import os
+import csv
 import subprocess as sp
 import logging
 logger = logging.getLogger("tools")
@@ -205,3 +206,43 @@ def reply_to_address(servername, username = None):
         username = getpass.getuser()
     address = username + '@' + servername
     return(address)
+
+def num_lines(input_file, skip = 0):
+    '''
+    Count the number of lines in a file
+    '''
+    with open(input_file, 'r') as f:
+        lines = f.read()
+        num = lines.count('\n')
+    num = num - skip
+    return(num)
+
+def write_tabular_overlap(file1, ref_file, output_file, delim = '\t'):
+    '''
+    Find matching entries between two tabular files
+    Write out all the entries in 'file1' that are found in the 'ref_file'
+    save entries to the output_file
+    both 'file1' and 'ref_file' must have headers in common
+    '''
+    # the column names from the files to preserve their order for writing
+    ref_colnames = None
+    file1_colnames = None
+    with open(ref_file, 'r') as ref_in, open(file1, 'r') as file1_in, open(output_file, 'w') as file_out:
+        # setup input files
+        ref_reader = csv.DictReader(ref_in, delimiter = delim)
+        file1_reader = csv.DictReader(file1_in, delimiter = delim)
+        # get the columns names from the ref file
+        if not ref_colnames:
+            ref_colnames = ref_reader.fieldnames
+        # get the column names from the sample annotation file
+        if not file1_colnames:
+            file1_colnames = file1_reader.fieldnames
+        # get the hapmap ref variants
+        ref_entries = [row for row in ref_reader]
+        # setup output file
+        write_out = csv.DictWriter(file_out, fieldnames = file1_colnames, delimiter = delim)
+        # write the output headers
+        write_out.writeheader()
+        for sample_row in file1_reader:
+            if {key: sample_row[key] for key in ref_colnames} in ref_entries:
+                write_out.writerow(sample_row)
