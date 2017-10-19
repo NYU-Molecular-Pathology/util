@@ -81,6 +81,53 @@ class TestSubprocessCmd(unittest.TestCase):
         returncode = x.process.returncode
         self.assertFalse(returncode < 1)
 
+class TestNumLines(unittest.TestCase):
+    def test_num_lines1(self):
+        input_file = os.path.join(fixture_dir, 'variants_ref.tsv')
+        self.assertTrue(t.num_lines(input_file = input_file, skip = 0) == 367)
+    def test_skip(self):
+        input_file = os.path.join(fixture_dir, 'variants_ref.tsv')
+        self.assertTrue(t.num_lines(input_file = input_file, skip = 1) == 366)
+
+class TestWriteTabularOverlap(unittest.TestCase):
+    '''
+    write_tabular_overlap
+    '''
+    def test_full_overlap(self):
+        file1 = os.path.join(fixture_dir, 'variants_head200.tsv')
+        ref_file = os.path.join(fixture_dir, 'variants_ref.tsv')
+        output_file = os.path.join(fixture_dir, 'foo_{0}.tsv'.format(t.timestamp()))
+        t.write_tabular_overlap(file1 = file1, ref_file = ref_file, output_file = output_file)
+        num_lines = t.num_lines(input_file = output_file, skip = 0)
+        self.assertTrue(num_lines == 201, 'Number of lines output in full overlap files does not match')
+    def test_partial_overlap(self):
+        file1 = os.path.join(fixture_dir, 'variants_head200.tsv')
+        ref_file = os.path.join(fixture_dir, 'variants_tail200.tsv')
+        output_file = os.path.join(fixture_dir, 'foo_{0}.tsv'.format(t.timestamp()))
+        t.write_tabular_overlap(file1 = file1, ref_file = ref_file, output_file = output_file)
+        num_lines = t.num_lines(input_file = output_file, skip = 0)
+        self.assertTrue(num_lines == 38, 'Number of lines output in partial overlap files does not match')
+    def test_true(self):
+        self.assertTrue(True, 'Demo true assertion')
+
+class TestUpdateJSON(unittest.TestCase):
+    def test_update_json1(self):
+        data1 = {'a': 1, 'b': 2}
+        data2 = {'c': 3, 'd': 4}
+        data3 = {'a': 1, 'c': 3, 'b': 2, 'd': 4}
+        output_file = os.path.join(fixture_dir, 'foo_{0}.json'.format(t.timestamp()))
+        t.write_json(object = data1, output_file = output_file)
+        t.update_json(data = data2, input_file = output_file)
+        data4 = t.load_json(input_file = output_file)
+        self.assertTrue(data3 == data4, 'Data read from JSON file does not match expected output')
+    def test_update_missingfile(self):
+        data1 = {'a': 1, 'b': 2}
+        output_file = os.path.join(fixture_dir, 'foo2_{0}.json'.format(t.timestamp()))
+        exists_before = t.item_exists(output_file)
+        t.update_json(data = data1, input_file = output_file)
+        exists_after = t.item_exists(output_file)
+        self.assertTrue(exists_after and not exists_before, 'File was not created correctly by the update JSON function')
+
 
 
 if __name__ == '__main__':
