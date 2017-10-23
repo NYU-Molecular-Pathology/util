@@ -225,13 +225,13 @@ def num_lines(input_file, skip = 0):
     num = num - skip
     return(num)
 
-def write_tabular_overlap(file1, ref_file, output_file, delim = '\t'):
+def write_tabular_overlap(file1, ref_file, output_file, delim = '\t', inverse = False):
     '''
     Find matching entries between two tabular files
     Write out all the entries in 'file1' that are found in the 'ref_file'
     save entries to the output_file
     both 'file1' and 'ref_file' must have headers in common
-    TODO: add tests for this one
+    inverse = True write out entries in file1 that are not in ref_file
     '''
     # the column names from the files to preserve their order for writing
     ref_colnames = None
@@ -253,5 +253,11 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t'):
         # write the output headers
         write_out.writeheader()
         for sample_row in file1_reader:
-            if {key: sample_row[key] for key in ref_colnames} in ref_entries:
-                write_out.writerow(sample_row)
+            if not inverse:
+                # save file1 entries found in ref
+                if {key: sample_row[key] for key in ref_colnames} in ref_entries:
+                    write_out.writerow(sample_row)
+            else:
+                # save file1 entries not found in ref
+                if {key: sample_row[key] for key in ref_colnames} not in ref_entries:
+                    write_out.writerow(sample_row)
