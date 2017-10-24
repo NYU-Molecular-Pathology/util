@@ -296,6 +296,29 @@ def monitor_jobs(jobs = None, kill_err = True):
     return()
 
 
+def find_all_job_id_names(text):
+    '''
+    Search a multi-line character string for all qsub job messages
+    text is a single text that contains multiple line
+
+    example:
+    text = '\n\n process sample SeraCare-1to1-Positive\n\n CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.SeraCare-1to1-Positive -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test SeraCare-1to1-Positive\nYour job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted\n\n'
+
+    [(job_id, job_name) for job_id, job_name in find_all_job_id_names(text)]
+    >> [('3947957', 'sns.wes.SeraCare-1to1-Positive')]
+    '''
+    # split the lines
+    text_lines = text.split('\n')
+    for line in text_lines:
+        # Your job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted
+        parts = line.split()
+        # ['Your', 'job', '3947957', '("sns.wes.SeraCare-1to1-Positive")', 'has', 'been', 'submitted']
+        if len(parts) >= 7:
+            if parts[0] == 'Your' and parts[1] == 'job' and parts[4] == 'has' and parts[5] == 'been' and parts[6] == 'submitted':
+                job_id, job_name = get_job_ID_name(proc_stdout = line)
+                # job = Job(id = job_id, name = job_name)
+                yield(job_id, job_name)
+
 
 def old_job_monitor(jobs):
     '''

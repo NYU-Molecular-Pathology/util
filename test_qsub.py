@@ -7,7 +7,8 @@ unit tests for the find module
 import unittest
 import os
 from qsub import Job
-
+import qsub
+import collections
 
 class TestJob(unittest.TestCase):
     def setUp(self):
@@ -17,6 +18,8 @@ class TestJob(unittest.TestCase):
         self.qstat_stdout_Eqw_qw_file = os.path.join(self.fixture_dir, "qstat_stdout_Eqw_qw.txt")
         self.qstat_stdout_r_Eqw_file = os.path.join(self.fixture_dir, "qstat_stdout_r_Eqw.txt")
         self.got_job_file = os.path.join(self.fixture_dir, "got_job.txt")
+        self.sns_qsub_stdout_file = os.path.join(self.fixture_dir, "sns_qsub_stdout.txt")
+
 
         with open(self.qstat_stdout_all_Eqw_file, "rb") as f:
             self.qstat_stdout_all_Eqw_str = f.read()
@@ -111,6 +114,18 @@ class TestJob(unittest.TestCase):
         expected = self.got_job_out
         got_job = x.get_job(id = x.id, qstat_stdout = self.qstat_stdout_r_Eqw_str)
         self.assertTrue(got_job == expected)
+
+    def test_find_all_job_id_names1(self):
+        '''
+        Test that job IDs and names can be parsed from a blob of text
+        '''
+        compare = lambda x, y: collections.Counter(x) == collections.Counter(y)
+        with open(self.sns_qsub_stdout_file) as f:
+            text = f.read()
+        jobs_id_list = [(job_id, job_name) for job_id, job_name in qsub.find_all_job_id_names(text = text)]
+        expected_list = [('3947949', 'sns.wes.HapMap-B17-1267'), ('3947956', 'sns.wes.NTC-H2O'), ('3947957', 'sns.wes.SeraCare-1to1-Positive')]
+        self.assertTrue(compare(jobs_id_list, expected_list))
+
 
 
 

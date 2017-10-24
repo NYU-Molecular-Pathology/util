@@ -10,6 +10,8 @@ import csv
 import json
 import getpass
 import subprocess as sp
+import shutil
+import collections
 import logging
 logger = logging.getLogger("tools")
 logger.debug("loading tools module")
@@ -69,6 +71,9 @@ class DirHop(object):
 
 
 # ~~~~ CUSTOM FUNCTIONS ~~~~~~ #
+compare = lambda x, y: collections.Counter(x) == collections.Counter(y)
+# compare two obects
+
 def my_debugger(vars):
     '''
     starts interactive Python terminal at location in script
@@ -261,3 +266,9 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t', inverse = 
                 # save file1 entries not found in ref
                 if {key: sample_row[key] for key in ref_colnames} not in ref_entries:
                     write_out.writerow(sample_row)
+
+
+def copy_and_overwrite(from_path, to_path):
+    if os.path.exists(to_path):
+        shutil.rmtree(to_path)
+    shutil.copytree(from_path, to_path)

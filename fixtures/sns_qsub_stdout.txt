@@ -1,0 +1,16 @@
+REF DIR : /ifs/home/id460/ref/hg19
+ REF FASTA : /ifs/data/sequence/Illumina/igor/ref/hg19/genome.fa
+[2017-10-24 17:13:15] DEBUG (_start_sns:start_sns:108) project dir: /ifs/data/molecpathlab/scripts/snsxt/sns_output/test
+code dir: /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns
+logs dir: /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/logs-qsub
+sample sheet: /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/samples.fastq-raw.csv
+ process sample HapMap-B17-1267
+ CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.HapMap-B17-1267 -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test HapMap-B17-1267
+Your job 3947949 ("sns.wes.HapMap-B17-1267") has been submitted
+ process sample NTC-H2O
+ CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.NTC-H2O -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test NTC-H2O
+Your job 3947956 ("sns.wes.NTC-H2O") has been submitted
+ process sample SeraCare-1to1-Positive
+ CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.SeraCare-1to1-Positive -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test SeraCare-1to1-Positive
+Your job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted
+
