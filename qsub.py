@@ -203,7 +203,7 @@ def get_job_ID_name(proc_stdout):
     return((job_id, job_name))
 
 
-def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = None):
+def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = None, print_verbose = False):
     '''
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
@@ -225,6 +225,9 @@ post_commands
 )
     if verbose == True:
         logger.debug('qsub command is:\n{0}'.format(qsub_command))
+
+    if print_verbose:
+        print('qsub command is:\n{0}'.format(qsub_command))
 
     # submit the job
     proc_stdout = subprocess_cmd(command = qsub_command, return_stdout = True)
@@ -367,163 +370,56 @@ def old_job_monitor(jobs):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# deprecated
-def get_job_status(job_id, qstat_stdout = None):
-    '''
-    Get the status of a qsub job
-    '''
-    import re
-    try:
-        from sh import qstat
-    except:
-        logger.error("qstat could not be loaded")
-    # job_id = '2305564'
-    # regex for the pattern matching https://docs.python.org/2/library/re.html
-    job_id_pattern = r"^.*{0}.*\s([a-zA-Z]+)\s.*$".format(job_id)
-    # get the qstat if it wasnt passed
-    if not qstat_stdout:
-        qstat_stdout = qstat()
-    status = re.search(str(job_id_pattern), str(qstat_stdout), re.MULTILINE).group(1)
-    return(status)
-
-
-def check_job_status(job_id, desired_status = "r"):
-    '''
-    Use 'qstat' to check on the run status of a qsub job
-    returns True or False if the job status matches the desired_status
-    job running:
-    desired_status = "r"
-    job waiting:
-    desired_status = "qw"
-    '''
-    job_id_pattern = r"^.*{0}.*\s{1}\s.*$".format(job_id, desired_status)
-    # using the 'sh' package
-    qstat_stdout = qstat()
-    # using the standard subprocess package
-    # qstat_stdout = subprocess_cmd('qstat', return_stdout = True)
-    job_match = re.findall(str(job_id_pattern), str(qstat_stdout), re.MULTILINE)
-    job_status = bool(job_match)
-    if job_status == True:
-        status = True
-        return(job_status)
-    elif job_status == False:
-        return(job_status)
-
-def wait_job_start(job_id, return_True = False):
-    '''
-    Monitor the output of 'qstat' to determine if a job is running or not
-    equivalent of
-    '''
-    logger.debug('waiting for job to start')
-    while check_job_status(job_id = job_id, desired_status = "r") != True:
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        sleep(3) # Time in seconds.
-    if check_job_status(job_id = job_id, desired_status = "r") == True:
-        logger.debug('job {0} has started'.format(job_id))
-        if return_True == True:
-            return(True)
-
-def wait_all_jobs_start(job_id_list):
-    '''
-    Wait for every job in a list to start
-    '''
-    jobs_started = False
-    startTime = datetime.datetime.now()
-    logger.debug("waiting for all jobs {0} to start...".format(job_id_list))
-    while not all([check_job_status(job_id = job_id, desired_status = "r") for job_id in job_id_list]):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        elapsed_time = datetime.datetime.now() - startTime
-        # make sure the jobs did not die
-        if all([check_job_absent(job_id = job_id) for job_id in job_id_list]):
-            logger.debug("all jobs are now absent from 'qstat' list; elapsed time: {0}".format(elapsed_time))
-            return(jobs_started)
-        sleep(2) # Time in seconds.
-    logger.debug("all jobs have started; elapsed time: {0}".format(elapsed_time))
-    if all([check_job_status(job_id = job_id, desired_status = "r") for job_id in job_id_list]):
-        jobs_started = True
-    return(jobs_started)
-
-def check_job_absent(job_id):
-    '''
-    Check that a single job is not in the 'qstat' list
-    '''
-    qstat_stdout = qstat()
-    job_id_pattern = r"^.*{0}.*$".format(job_id)
-    job_match = re.findall(str(job_id_pattern), str(qstat_stdout), re.MULTILINE)
-    job_status = bool(job_match)
-    if job_status == True:
-        return(False)
-    elif job_status == False:
-        return(True)
-
-
-def wait_all_jobs_finished(job_id_list):
-    '''
-    Wait for all jobs in the list to finish
-    A finished job is no longer present in the 'qstat' list
-    '''
-    jobs_finished = False
-    startTime = datetime.datetime.now()
-    logger.debug("waiting for all jobs {0} to finish...".format(job_id_list))
-    while not all([check_job_absent(job_id = job_id) for job_id in job_id_list]):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        sleep(3) # Time in seconds.
-    elapsed_time = datetime.datetime.now() - startTime
-    logger.debug("all jobs have finished; elapsed time: {0}".format(elapsed_time))
-    if all([check_job_absent(job_id = job_id) for job_id in job_id_list]):
-        jobs_finished = True
-    return(jobs_finished)
-
 def demo_qsub():
     '''
     Demo the qsub code functions
     '''
+    print('running single-job demo')
+
     command = '''
     set -x
     cat /etc/hosts
-    sleep 300
+    sleep 10
     '''
-    proc_stdout = submit_job(command = command, verbose = True, return_stdout = True)
-    job_id, job_name = get_job_ID_name(proc_stdout)
-    logger.debug('Job ID: {0}'.format(job_id))
-    logger.debug('Job Name: {0}'.format(job_name))
-    wait_job_start(job_id)
 
-def demo_multi_qsub():
+    job = submit(command = command, print_verbose = True)
+    print('job id: {0}'.format(job.id))
+    print('job name: {0}'.format(job.name))
+
+    print('waiting on job to finish')
+    monitor_jobs(jobs = [job])
+    print('job has finished\n\n')
+
+    return()
+
+def demo_multi_qsub(job_num = 5):
     '''
     Demo the qsub code functions
     '''
+    job_num = int(job_num)
+
+    print('running multi-job demo')
+
     command = '''
     set -x
     cat /etc/hosts
-    sleep 30
+    sleep 10
+    sleep $((1 + RANDOM % 10))
     '''
-    job_id_list = []
-    for i in range(5):
-        proc_stdout = submit_job(command = command, verbose = True, return_stdout = True)
-        job_id, job_name = get_job_ID_name(proc_stdout)
-        logger.debug("Job submitted...")
-        logger.debug('Job ID: {0}'.format(job_id))
-        logger.debug('Job Name: {0}'.format(job_name))
-        job_id_list.append(job_id)
-    wait_all_jobs_start(job_id_list)
-    wait_all_jobs_finished(job_id_list)
+
+    # list to capture the jobs as they are created
+    jobs = []
+
+    # submit a number of jobs
+    for i in range(job_num):
+        job = submit(command = command, print_verbose = True)
+        print('submitted job: {0} "{1}"'.format(job.id, job.name))
+        jobs.append(job)
+
+    # wait for jobs to finish
+    print('waiting on jobs to finish')
+    monitor_jobs(jobs = jobs)
+    print('jobs have finished\n\n')
 
 
 if __name__ == "__main__":
