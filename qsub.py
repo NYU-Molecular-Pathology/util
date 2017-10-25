@@ -392,7 +392,7 @@ def demo_qsub():
 
     return()
 
-def demo_multi_qsub(job_num = 5):
+def demo_multi_qsub(job_num = 3):
     '''
     Demo the qsub code functions
     '''
