@@ -203,7 +203,7 @@ def get_job_ID_name(proc_stdout):
     return((job_id, job_name))
 
 
-def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = None, print_verbose = False):
+def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False):
     '''
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
