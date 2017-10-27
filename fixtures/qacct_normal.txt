@@ -1,0 +1,86 @@
+==============================================================
+qname        all.q               
+hostname     node011.cm.cluster  
+group        renj01              
+owner        renj01              
+project      NONE                
+department   defaultdepartment   
+jobname      run_matlab_scriptJR.sh
+jobnumber    3956736             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Mon Feb 15 14:50:42 2016
+start_time   Mon Feb 15 14:57:38 2016
+end_time     Mon Feb 15 14:58:42 2016
+granted_pe   NONE                
+slots        1                   
+failed       0    
+exit_status  0                   
+ru_wallclock 64           
+ru_utime     15.049       
+ru_stime     0.850        
+ru_maxrss    288348              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    76124               
+ru_majflt    1                   
+ru_nswap     0                   
+ru_inblock   1328                
+ru_oublock   3440                
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     4954                
+ru_nivcsw    30477               
+cpu          15.899       
+mem          50.199            
+io           0.088             
+iow          0.000             
+maxvmem      4.341G
+arid         undefined
+==============================================================
+qname        all.q               
+hostname     node055.cm.cluster  
+group        kellys04            
+owner        kellys04            
+project      NONE                
+department   defaultdepartment   
+jobname      python              
+jobnumber    3956736             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Thu Oct 26 22:02:52 2017
+start_time   Thu Oct 26 22:02:58 2017
+end_time     Thu Oct 26 22:03:14 2017
+granted_pe   NONE                
+slots        1                   
+failed       0    
+exit_status  0                   
+ru_wallclock 16           
+ru_utime     0.092        
+ru_stime     0.035        
+ru_maxrss    4880                
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    16231               
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   0                   
+ru_oublock   48                  
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     359                 
+ru_nivcsw    28                  
+cpu          0.127        
+mem          0.001             
+io           0.001             
+iow          0.000             
+maxvmem      111.828M
+arid         undefined

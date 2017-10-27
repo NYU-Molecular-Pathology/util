@@ -1,0 +1,86 @@
+==============================================================
+qname        all.q               
+hostname     node063.cm.cluster  
+group        renj01              
+owner        renj01              
+project      NONE                
+department   defaultdepartment   
+jobname      run_matlab_scriptJR.sh
+jobnumber    3949361             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Mon Feb 15 14:22:09 2016
+start_time   Mon Feb 15 14:34:09 2016
+end_time     Mon Feb 15 14:34:56 2016
+granted_pe   NONE                
+slots        1                   
+failed       0    
+exit_status  0                   
+ru_wallclock 47           
+ru_utime     39.189       
+ru_stime     0.609        
+ru_maxrss    282380              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    74901               
+ru_majflt    1                   
+ru_nswap     0                   
+ru_inblock   3312                
+ru_oublock   3440                
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     2926                
+ru_nivcsw    2135                
+cpu          39.798       
+mem          92.021            
+io           0.089             
+iow          0.000             
+maxvmem      4.341G
+arid         undefined
+==============================================================
+qname        all.q               
+hostname     node016.cm.cluster  
+group        kellys04            
+owner        kellys04            
+project      NONE                
+department   defaultdepartment   
+jobname      sns.wes.Sample1
+jobnumber    3949361             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Oct 24 18:04:28 2017
+start_time   Tue Oct 24 18:04:34 2017
+end_time     Tue Oct 24 18:21:18 2017
+granted_pe   threaded            
+slots        13                  
+failed       100 : assumedly after job
+exit_status  137                 
+ru_wallclock 1004         
+ru_utime     1040.336     
+ru_stime     49.008       
+ru_maxrss    1847684             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    2515678             
+ru_majflt    281                 
+ru_nswap     0                   
+ru_inblock   5379792             
+ru_oublock   2457816             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1779926             
+ru_nivcsw    36837               
+cpu          10310.120    
+mem          204342.649        
+io           37.387            
+iow          0.000             
+maxvmem      21.801G
+arid         undefined

@@ -27,6 +27,8 @@ class Container(object):
 class SubprocessCmd(object):
     '''
     A command to be run in subprocess
+
+    run_cmd = SubprocessCmd(command = command).run()
     '''
     def __init__(self, command):
         self.command = command
