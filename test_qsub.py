@@ -19,6 +19,10 @@ class TestJob(unittest.TestCase):
         self.qstat_stdout_r_Eqw_file = os.path.join(self.fixture_dir, "qstat_stdout_r_Eqw.txt")
         self.got_job_file = os.path.join(self.fixture_dir, "got_job.txt")
         self.sns_qsub_stdout_file = os.path.join(self.fixture_dir, "sns_qsub_stdout.txt")
+        self.qacct_normal_file = os.path.join(self.fixture_dir, "qacct_normal.txt")
+        # self.qacct_died_file = os.path.join(self.fixture_dir, "qacct_died.txt")
+        self.qacct_killed_file = os.path.join(self.fixture_dir, "qacct_killed.txt")
+
 
 
         with open(self.qstat_stdout_all_Eqw_file, "rb") as f:
@@ -126,9 +130,49 @@ class TestJob(unittest.TestCase):
         expected_list = [('3947949', 'sns.wes.HapMap-B17-1267'), ('3947956', 'sns.wes.NTC-H2O'), ('3947957', 'sns.wes.SeraCare-1to1-Positive')]
         self.assertTrue(compare(jobs_id_list, expected_list))
 
+    def test_validate_qacct_normal1(self):
+        '''
+        Test that a job can be validated from qacct stdout
+        '''
+        job = Job(id = '3956736', debug = True)
+        with open(self.qacct_normal_file) as f:
+            qacct_stdout = f.read()
+        job.qacct_stdout = qacct_stdout
+        validation = job.validate_completion(username = 'kellys04', days_limit = None)
+        self.assertTrue(validation)
 
+    def test_validate_qacct_normal1_too_old(self):
+        '''
+        Test that a job can be validated from qacct stdout
+        '''
+        job = Job(id = '3956736', debug = True)
+        with open(self.qacct_normal_file) as f:
+            qacct_stdout = f.read()
+        job.qacct_stdout = qacct_stdout
+        validation = job.validate_completion(username = 'kellys04', days_limit = 1)
+        self.assertFalse(validation)
 
+    def test_validate_qacct_normal_wrongusername(self):
+        '''
+        Test that a job can be validated from qacct stdout
+        '''
+        job = Job(id = '3956736', debug = True)
+        with open(self.qacct_normal_file) as f:
+            qacct_stdout = f.read()
+        job.qacct_stdout = qacct_stdout
+        validation = job.validate_completion(username = 'fooo', days_limit = None)
+        self.assertFalse(validation)
 
+    def test_validate_qacct_killed1(self):
+        '''
+        Test that a job that was killed due to errors does not pass validation
+        '''
+        job = Job(id = '3949361', debug = True)
+        with open(self.qacct_killed_file) as f:
+            qacct_stdout = f.read()
+        job.qacct_stdout = qacct_stdout
+        validation = job.validate_completion(username = 'kellys04', days_limit = None)
+        self.assertFalse(validation)
 
 
 if __name__ == '__main__':

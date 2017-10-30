@@ -52,7 +52,10 @@ class Job(object):
         # add the rest of the attributes as per the update function
         if not debug:
             self._update()
+    def __repr__(self):
+        return('Job(id = {0}, name = {1})'.format(self.id, self.name))
 
+    # ~~~~~ Methods for determining running job state from qstat ~~~~~ #
     def get_job(self, id, qstat_stdout = None):
         '''
         Retrieve the job's qstat entry
@@ -163,6 +166,164 @@ class Job(object):
         '''
         self._update()
         return(self.is_present)
+
+    # ~~~~~ Methods for querying qacct for job completion status ~~~~~ #
+    def get_qacct(self, job_id = None):
+        '''
+        get the qacct entry for a completed qsub job
+        WARNING: This is extremely slow!! 10 - 30+ seconds
+        '''
+        if not job_id:
+            job_id = self.id
+        qacct_command = 'qacct -j {0}'.format(job_id)
+        run_cmd = t.SubprocessCmd(command = qacct_command).run()
+        return(run_cmd.proc_stdout)
+
+    def qacct2dict(self, proc_stdout = None, entry_delim = None):
+        '''
+        convert text output from qacct into a dictionary for parsing
+        qacct returns multiple entries per job_id, because the job_id
+        numbers wrap around so multiple historic jobs have had the same number
+        each job entry for a given number is separated by a large delimiter string
+        '''
+        if not proc_stdout:
+            proc_stdout = self.get_qacct()
+        # entries for jobs in the qacct stdout are split with this character string
+        if not entry_delim:
+            entry_delim = '=============================================================='
+        # dict to hold the items in each entry
+        entry_dict = {}
+        # split the large blob of stdout text into separate job entries; skip empty entries
+        entries = [c for c in proc_stdout.split(entry_delim) if c != '']
+        # each entry has one item per line, separated by a variable amount of whitespace
+        for i, entry in enumerate(entries):
+            # items in the entry
+            entry_stats = entry.split('\n')
+            entry_dict[i] = {}
+            for item in entry_stats:
+                # split on the first whitespace; make sure at least 2 entries are produced
+                if len(item.split(None, 1)) >=2:
+                    key, value = item.split(None, 1)
+                    entry_dict[i][key] = value.strip()
+        return(entry_dict)
+
+    def filter_qacct(self, qacct_dict = None, days_limit = 7, username = None):
+        '''
+        filter out 'bad' entries from the dict
+        since the qacct_dict contains historic entries with the same job_id,
+        we need to filter them out
+        each job entry should have a username associated, try to match this against
+        the current user's username
+        if the job entry does not match, get rid of it
+        also come up with other criteria for filtering out unwanted job entries here...
+
+        - also make sure the job completed recently, 7 days should be plenty of time to wait for a job to finish
+
+        TODO: come up with other criteria for filtering out unwanted job entries here...
+
+        ultimately, we need to make sure that only one entry exists in this dict
+        corresponding to the correct entry for this job
+        '''
+        if not username:
+            username = getpass.getuser()
+
+        if not qacct_dict:
+            qacct_dict = self.qacct2dict()
+
+        for key, subdict in qacct_dict.items():
+            # only keep the entries that match the current user's username
+            job_owner = subdict['owner']
+            if job_owner != username:
+                qacct_dict.pop(key)
+                continue
+
+            # make sure the job was completed within the last 7 days
+            job_end_time = subdict['end_time']
+            job_end_time_obj = datetime.datetime.strptime(job_end_time, "%c")
+            time_now = datetime.datetime.now()
+            time_elapsed = time_now - job_end_time_obj
+            if days_limit:
+                if time_elapsed.days > days_limit:
+                    qacct_dict.pop(key)
+                    continue
+        # more filter criteria here...
+        return(qacct_dict)
+
+    def get_qacct_job_failed_status(self, failed_entry):
+        '''
+        Special parsing for the 'failed' entry in qacct output
+        because its not a plain digit value its got some weird text description stuck in there too sometimes
+
+        {'failed': '100 : assumedly after job'}
+
+        return the first int after splitting on the first whitespace
+        '''
+        # get the first entry in the line split by whitespace
+        value = failed_entry.split(None, 1)[0]
+        value = int(value)
+        return(value)
+
+    def validate_completion(self, job_id = None, *args, **kwargs):
+        '''
+        Check if the qsub job completed successfully
+        '''
+        if not job_id:
+            job_id = self.id
+        # make sure the job is not currently running or in queues
+        if self.present():
+            logger.error('Job {0} is still running and cannot be validated for completion'.format(job_id))
+            return(False)
+
+        # get the results of the qacct query command
+        if not hasattr(self, 'qacct_stdout'):
+            # allow qacct_stdout to be pre-set externally for debugging & testing
+            # also prevent querying qacct multiple times for the same job
+            self.qacct_stdout = self.get_qacct(job_id = job_id)
+        # convert it into a dict
+        self.qacct_dict = self.qacct2dict(proc_stdout = self.qacct_stdout)
+        # filter extraneous entries
+        self.qacct_dict = self.filter_qacct(qacct_dict = self.qacct_dict, *args, **kwargs)
+        # make sure there are entries left
+        if not self.qacct_dict:
+            logger.error('No valid job entries found for job_id {0}'.format(job_id))
+            return(False)
+        # make sure only one entry is left!
+        if len(self.qacct_dict.keys()) > 1:
+            logger.debug('Multiple entries found for job_id {0};\n{1}'.format(job_id, qacct_dict))
+            return(False)
+
+        # check the 'failed' status; >0 = failed !!
+        validate_failed_status = True
+        # get the key index for the first entry inthe dict
+        first_entry_key = self.qacct_dict.keys()[0]
+        status_code = self.get_qacct_job_failed_status(failed_entry = self.qacct_dict[first_entry_key]['failed'])
+        if status_code > 0:
+            validate_failed_status = False
+
+        # check the 'exit_status'
+        validate_exit_status = True
+        first_entry_key = self.qacct_dict.keys()[0]
+        if int(self.qacct_dict[first_entry_key]['exit_status']) > 0:
+            validate_exit_status = False
+        # add more criteria here...
+
+        # aggregate the validations
+        validations = [
+        validate_failed_status,
+        validate_exit_status
+        ]
+
+        # check if not all validations are True...
+        if not all(validations):
+            logger.error('The job {0} is not valid'.format(job_id))
+            logger.error({'validate_failed_status': validate_failed_status, 'validate_exit_status': validate_exit_status})
+            return(False)
+        else:
+            logger.debug('The job {0} is valid'.format(job_id))
+            return(True)
+
+
+
 
 
 # ~~~~~~ JOB FUNCTIONS ~~~~~ #
@@ -451,6 +612,12 @@ def demo_qsub():
     monitor_jobs(jobs = [job])
     print('job has finished\n\n')
 
+    print('validating job completeion...')
+    if job.validate_completion():
+        print('Job completed successfully')
+    else:
+        print('Job did not pass completion validation!!!')
+
     return()
 
 def demo_multi_qsub(job_num = 3):
@@ -481,6 +648,15 @@ def demo_multi_qsub(job_num = 3):
     print('waiting on jobs to finish')
     monitor_jobs(jobs = jobs)
     print('jobs have finished\n\n')
+
+    print('validating job completions...')
+
+    if all([job.validate_completion() for job in jobs]):
+        print('All jobs completed successfully')
+    else:
+        for job in jobs:
+            if not job.validate_completion():
+                print('Job {0} did not complete successfully!'.format(job.id))
 
 
 if __name__ == "__main__":
