@@ -271,7 +271,7 @@ class Job(object):
             job_id = self.id
         # make sure the job is not currently running or in queues
         if self.present():
-            logger.error('Job {0} is still running and cannot be validated for completion'.format(job_id))
+            # logger.error('Job {0} is still running and cannot be validated for completion'.format(job_id))
             return(False)
 
         # get the results of the qacct query command
@@ -285,11 +285,11 @@ class Job(object):
         self.qacct_dict = self.filter_qacct(qacct_dict = self.qacct_dict, *args, **kwargs)
         # make sure there are entries left
         if not self.qacct_dict:
-            logger.error('No valid job entries found for job_id {0}'.format(job_id))
+            # logger.error('No valid job entries found for job_id {0}'.format(job_id))
             return(False)
         # make sure only one entry is left!
         if len(self.qacct_dict.keys()) > 1:
-            logger.debug('Multiple entries found for job_id {0};\n{1}'.format(job_id, qacct_dict))
+            # logger.debug('Multiple entries found for job_id {0};\n{1}'.format(job_id, qacct_dict))
             return(False)
 
         # check the 'failed' status; >0 = failed !!
@@ -315,11 +315,11 @@ class Job(object):
 
         # check if not all validations are True...
         if not all(validations):
-            logger.error('The job {0} is not valid'.format(job_id))
-            logger.error({'validate_failed_status': validate_failed_status, 'validate_exit_status': validate_exit_status})
+            # logger.error('The job {0} is not valid'.format(job_id))
+            # logger.error({'validate_failed_status': validate_failed_status, 'validate_exit_status': validate_exit_status})
             return(False)
         else:
-            logger.debug('The job {0} is valid'.format(job_id))
+            # logger.debug('The job {0} is valid'.format(job_id))
             return(True)
 
 
@@ -431,6 +431,7 @@ def monitor_jobs(jobs = None, kill_err = True):
         logger.error('"jobs" passed is not a list')
         return()
 
+    completed_jobs = []
     # jobs in error state; won't finish
     err_jobs = []
     num_jobs = len(jobs)
@@ -443,7 +444,7 @@ def monitor_jobs(jobs = None, kill_err = True):
         # check each job for presence & error state
         for i, job in enumerate(jobs):
             if not job.present():
-                jobs.remove(job)
+                completed_jobs.append(jobs.pop(i)) # jobs.remove(job)
             if job.error():
                 err_jobs.append(jobs.pop(i))
         sleep(5)
@@ -458,7 +459,7 @@ def monitor_jobs(jobs = None, kill_err = True):
             qdel_command = 'qdel {0}'.format(' '.join([job.id for job in err_jobs]))
             cmd = t.SubprocessCmd(command = qdel_command).run()
             logger.debug(cmd.proc_stdout)
-    return()
+    return((completed_jobs, err_jobs))
 
 
 def find_all_job_id_names(text):
