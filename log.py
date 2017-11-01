@@ -173,3 +173,9 @@ def email_log_filehandler(log_file, name = "emaillog", level = logging.INFO, log
     emailhandler.set_name(name)
     emailhandler.setFormatter(formatter)
     return(emailhandler)
+
+def log_exception(logger, errors):
+    '''
+    Create a log entry with the errors and traceback
+    '''
+    logger.error(errors, exc_info=True)
