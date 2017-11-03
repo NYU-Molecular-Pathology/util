@@ -19,6 +19,7 @@ import datetime
 from time import sleep
 import sys
 import getpass
+import json
 try:
     from sh import qstat
 except:
@@ -49,6 +50,8 @@ class Job(object):
         self.job_state_key = job_state_key
         self.id = id
         self.name = name
+        self.completions = '{0}'.format(self.__repr__())
+
         # add the rest of the attributes as per the update function
         if not debug:
             self._update()
@@ -263,6 +266,16 @@ class Job(object):
         value = int(value)
         return(value)
 
+    def update_completion_validations(self, validation_dict):
+        '''
+        Update a dict of validation stats
+        and its text string representation
+        '''
+
+        self.completion_validations.update(validation_dict)
+        self.validations = json.dumps(self.completion_validations, indent = 4)
+        self.completions = '{0}\n{1}\n'.format(self.__repr__(), self.validations)
+
     def validate_completion(self, job_id = None, *args, **kwargs):
         '''
         Check if the qsub job completed successfully
@@ -283,12 +296,12 @@ class Job(object):
         validation = {'qtat_presence': {'status': self.present()}}
         if validation['qtat_presence']['status']:
             validation['qtat_presence']['note'] = 'The job is still present in qstat and has not completed yet; job cannot be validated'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
             # logger.error('Job {0} is still running and cannot be validated for completion'.format(job_id))
             return(False)
         else:
             validation['qtat_presence']['note'] = 'The job is not present in qstat and has completed'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
 
         # get the results of the qacct query command
         if not hasattr(self, 'qacct_stdout'):
@@ -311,13 +324,13 @@ class Job(object):
         if not self.qacct_dict:
             validation['has_qacct_entries']['status'] = False
             validation['has_qacct_entries']['note'] = 'No entries were left in qacct job record output after filtering; job cannot be validated'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
             # logger.error('No valid job entries found for job_id {0}'.format(job_id))
             return(False)
         else:
             validation['has_qacct_entries']['status'] = True
             validation['has_qacct_entries']['note'] = 'At least one entry was left in qacct job record output after filtering'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
 
         # make sure only one entry is left!
         validation = {
@@ -329,13 +342,13 @@ class Job(object):
         if len(self.qacct_dict.keys()) > 1:
             validation['has_only_one_qacct_entry']['status'] = False
             validation['has_only_one_qacct_entry']['note'] = 'More than one entry was left in qacct job record output after filtering; job cannot be validated'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
             # logger.debug('Multiple entries found for job_id {0};\n{1}'.format(job_id, qacct_dict))
             return(False)
         else:
             validation['has_only_one_qacct_entry']['status'] = True
             validation['has_only_one_qacct_entry']['note'] = 'Only one entry was left in qacct job record output after filtering'
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
 
         # example qacct output:
         # failed       0
@@ -354,11 +367,11 @@ class Job(object):
         if status_code > 0:
             validation['failed_status_0']['status'] = False
             validation['failed_status_0']['note'] = 'The "failed" qacct value for the job was {0}; >0 means the job failed'.format(status_code)
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
         else:
             validation['failed_status_0']['status'] = True
             validation['failed_status_0']['note'] = 'The "failed" qacct value for the job was {0}; >0 means the job failed'.format(status_code)
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
 
         # check the 'exit_status'
         validation = {
@@ -372,16 +385,16 @@ class Job(object):
         if exit_status > 0:
             validation['exit_status_0']['status'] = False
             validation['exit_status_0']['note'] = 'The "exit_status" qacct value for the job was {0}; >0 means the job failed'.format(exit_status)
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
         else:
             validation['exit_status_0']['status'] = True
             validation['exit_status_0']['note'] = 'The "exit_status" qacct value for the job was {0}; >0 means the job failed'.format(exit_status)
-            self.completion_validations.update(validation)
+            self.update_completion_validations(validation)
         # add more criteria here...
 
         # aggregate the validations
         validations = [
-        self.completion_validations['exit_status_0']['status'], 
+        self.completion_validations['exit_status_0']['status'],
         self.completion_validations['failed_status_0']['status']
         ]
 
@@ -674,6 +687,8 @@ def validate_job_completion(job_id):
 def demo_qsub():
     '''
     Demo the qsub code functions
+
+    >>> import qsub; job = qsub.submit(print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
     '''
     print('running single-job demo')
 
