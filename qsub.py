@@ -269,48 +269,120 @@ class Job(object):
         '''
         if not job_id:
             job_id = self.id
+
+        # create a list of validations for the object
+        self.completion_validations = {}
+
         # make sure the job is not currently running or in queues
-        if self.present():
+        validation = {
+            'qtat_presence': {
+            'status': self.present(),
+            'note': None
+            }
+        }
+        validation = {'qtat_presence': {'status': self.present()}}
+        if validation['qtat_presence']['status']:
+            validation['qtat_presence']['note'] = 'The job is still present in qstat and has not completed yet; job cannot be validated'
+            self.completion_validations.update(validation)
             # logger.error('Job {0} is still running and cannot be validated for completion'.format(job_id))
             return(False)
+        else:
+            validation['qtat_presence']['note'] = 'The job is not present in qstat and has completed'
+            self.completion_validations.update(validation)
 
         # get the results of the qacct query command
         if not hasattr(self, 'qacct_stdout'):
             # allow qacct_stdout to be pre-set externally for debugging & testing
             # also prevent querying qacct multiple times for the same job
             self.qacct_stdout = self.get_qacct(job_id = job_id)
+
         # convert it into a dict
         self.qacct_dict = self.qacct2dict(proc_stdout = self.qacct_stdout)
         # filter extraneous entries
         self.qacct_dict = self.filter_qacct(qacct_dict = self.qacct_dict, *args, **kwargs)
+
         # make sure there are entries left
+        validation = {
+            'has_qacct_entries': {
+            'status': None,
+            'note': None
+            }
+        }
         if not self.qacct_dict:
+            validation['has_qacct_entries']['status'] = False
+            validation['has_qacct_entries']['note'] = 'No entries were left in qacct job record output after filtering; job cannot be validated'
+            self.completion_validations.update(validation)
             # logger.error('No valid job entries found for job_id {0}'.format(job_id))
             return(False)
+        else:
+            validation['has_qacct_entries']['status'] = True
+            validation['has_qacct_entries']['note'] = 'At least one entry was left in qacct job record output after filtering'
+            self.completion_validations.update(validation)
+
         # make sure only one entry is left!
+        validation = {
+            'has_only_one_qacct_entry': {
+            'status': None,
+            'note': None
+            }
+        }
         if len(self.qacct_dict.keys()) > 1:
+            validation['has_only_one_qacct_entry']['status'] = False
+            validation['has_only_one_qacct_entry']['note'] = 'More than one entry was left in qacct job record output after filtering; job cannot be validated'
+            self.completion_validations.update(validation)
             # logger.debug('Multiple entries found for job_id {0};\n{1}'.format(job_id, qacct_dict))
             return(False)
+        else:
+            validation['has_only_one_qacct_entry']['status'] = True
+            validation['has_only_one_qacct_entry']['note'] = 'Only one entry was left in qacct job record output after filtering'
+            self.completion_validations.update(validation)
+
+        # example qacct output:
+        # failed       0
+        # exit_status  1
 
         # check the 'failed' status; >0 = failed !!
-        validate_failed_status = True
+        validation = {
+            'failed_status_0': {
+            'status': False,
+            'note': None
+            }
+        }
         # get the key index for the first entry inthe dict
         first_entry_key = self.qacct_dict.keys()[0]
         status_code = self.get_qacct_job_failed_status(failed_entry = self.qacct_dict[first_entry_key]['failed'])
         if status_code > 0:
-            validate_failed_status = False
+            validation['failed_status_0']['status'] = False
+            validation['failed_status_0']['note'] = 'The "failed" qacct value for the job was {0}; >0 means the job failed'.format(status_code)
+            self.completion_validations.update(validation)
+        else:
+            validation['failed_status_0']['status'] = True
+            validation['failed_status_0']['note'] = 'The "failed" qacct value for the job was {0}; >0 means the job failed'.format(status_code)
+            self.completion_validations.update(validation)
 
         # check the 'exit_status'
-        validate_exit_status = True
+        validation = {
+            'exit_status_0': {
+            'status': False,
+            'note': None
+            }
+        }
         first_entry_key = self.qacct_dict.keys()[0]
-        if int(self.qacct_dict[first_entry_key]['exit_status']) > 0:
-            validate_exit_status = False
+        exit_status = int(self.qacct_dict[first_entry_key]['exit_status'])
+        if exit_status > 0:
+            validation['exit_status_0']['status'] = False
+            validation['exit_status_0']['note'] = 'The "exit_status" qacct value for the job was {0}; >0 means the job failed'.format(exit_status)
+            self.completion_validations.update(validation)
+        else:
+            validation['exit_status_0']['status'] = True
+            validation['exit_status_0']['note'] = 'The "exit_status" qacct value for the job was {0}; >0 means the job failed'.format(exit_status)
+            self.completion_validations.update(validation)
         # add more criteria here...
 
         # aggregate the validations
         validations = [
-        validate_failed_status,
-        validate_exit_status
+        self.completion_validations['exit_status_0']['status'], 
+        self.completion_validations['failed_status_0']['status']
         ]
 
         # check if not all validations are True...
@@ -404,7 +476,7 @@ post_commands
     elif return_stdout == False:
         logger.debug(proc_stdout)
 
-def monitor_jobs(jobs = None, kill_err = True):
+def monitor_jobs(jobs = None, kill_err = True, print_verbose = False):
     '''
     Monitor a list of qsub Job objects for completion
     make sure that all jobs are present in the qstat output
@@ -436,11 +508,13 @@ def monitor_jobs(jobs = None, kill_err = True):
     err_jobs = []
     num_jobs = len(jobs)
     logger.info('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
+    if print_verbose: print('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
     while num_jobs > 0:
         # check number of jobs in the list
         if num_jobs != len(jobs):
             num_jobs = len(jobs)
             logger.debug("Number of jobs in queue: {0}".format(num_jobs))
+            if print_verbose: print("Number of jobs in queue: {0}".format(num_jobs))
         # check each job for presence & error state
         for i, job in enumerate(jobs):
             if not job.present():
@@ -449,16 +523,20 @@ def monitor_jobs(jobs = None, kill_err = True):
                 err_jobs.append(jobs.pop(i))
         sleep(5)
     logger.info('No jobs remaining in the job queue')
+    if print_verbose: print('No jobs remaining in the job queue')
 
     # check if there were any jobs left in error state
     if err_jobs:
         logger.error('{0} jobs left were left in error state. Jobs: {1}'.format(len(err_jobs), [job.id for job in err_jobs]))
+        if print_verbose: print('{0} jobs left were left in error state. Jobs: {1}'.format(len(err_jobs), [job.id for job in err_jobs]))
         # kill the error jobs with the 'qdel' command
         if kill_err:
             logger.debug('Killing jobs left in error state')
+            if print_verbose: print('Killing jobs left in error state')
             qdel_command = 'qdel {0}'.format(' '.join([job.id for job in err_jobs]))
             cmd = t.SubprocessCmd(command = qdel_command).run()
             logger.debug(cmd.proc_stdout)
+            if print_verbose: print(cmd.proc_stdout)
     return((completed_jobs, err_jobs))
 
 
