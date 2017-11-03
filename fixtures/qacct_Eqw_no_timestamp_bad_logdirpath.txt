@@ -1,0 +1,44 @@
+==============================================================
+qname        all.q
+hostname     node034.cm.cluster
+group        kellys04
+owner        kellys04
+project      NONE
+department   defaultdepartment
+jobname      python
+jobnumber    4088835
+taskid       undefined
+account      sge
+priority     0
+qsub_time    Fri Nov  3 16:56:38 2017
+start_time   -/-
+end_time     -/-
+granted_pe   NONE
+slots        1
+failed       26  : opening input/output file
+exit_status  0
+ru_wallclock 0
+ru_utime     0.000
+ru_stime     0.000
+ru_maxrss    0
+ru_ixrss     0
+ru_ismrss    0
+ru_idrss     0
+ru_isrss     0
+ru_minflt    0
+ru_majflt    0
+ru_nswap     0
+ru_inblock   0
+ru_oublock   0
+ru_msgsnd    0
+ru_msgrcv    0
+ru_nsignals  0
+ru_nvcsw     0
+ru_nivcsw    0
+cpu          0.000
+mem          0.000
+io           0.000
+iow          0.000
+maxvmem      0.000
+arid         undefined
+
