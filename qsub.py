@@ -10,7 +10,7 @@ modified for use with run-monitor system
 import logging
 logger = logging.getLogger("qsub")
 logger.debug("loading qsub module")
-
+import os
 from collections import defaultdict
 import subprocess as sp
 import re
@@ -45,20 +45,54 @@ class Job(object):
     x.running()
     x.present()
     '''
-    def __init__(self, id, name = None, debug = False):
+    def __init__(self, id, name = None, log_dir = None, debug = False):
         global job_state_key
         self.job_state_key = job_state_key
         self.id = id
         self.name = name
-        self.completions = '{0}'.format(self.__repr__())
+        self.log_dir = log_dir
+        self.log_paths = {}
+        self.update_log_files()
+        # hold a character string of completion validation information
+        self.completions = self._completions()
 
         # add the rest of the attributes as per the update function
         if not debug:
             self._update()
     def __repr__(self):
-        return('Job(id = {0}, name = {1})'.format(self.id, self.name))
+        return('Job(id = {0}, name = {1}, log_dir = {2})'.format(self.id, self.name, self.log_dir))
 
     # ~~~~~ Methods for determining running job state from qstat ~~~~~ #
+    def _completions(self):
+        '''
+        Make the default 'completions' string
+        '''
+        return('{0}\nlog_paths = {1}\n'.format(self.__repr__(), self.log_paths))
+
+    def update_log_files(self, _type = 'stdout'):
+        '''
+        Update the paths to the log files
+        '''
+        log_path = self.get_log_file(_type = _type)
+        self.log_paths.update({_type: log_path})
+
+    def get_log_file(self, _type = 'stdout'):
+        '''
+        Return the expected path to the job's log file
+        e.g.: python.o4088513
+        '''
+        if not self.log_dir:
+            logger.error('log_dir attribute is not set for this qsub job')
+            return(None)
+        type_key = {'stdout': '.o', 'stderr': '.e'}
+        type_char = type_key[_type]
+        logfile = str(self.name) + type_char + str(self.id)
+        log_path = os.path.join(str(self.log_dir), logfile)
+        if not t.item_exists(log_path):
+            logger.warning('Log file does not appear to exist: {0}'.format(log_path))
+        return(log_path)
+
+
     def get_job(self, id, qstat_stdout = None):
         '''
         Retrieve the job's qstat entry
@@ -242,6 +276,7 @@ class Job(object):
 
             # make sure the job was completed within the last 7 days
             job_end_time = subdict['end_time']
+            # TODO: sometimes the timestamp is not in the correct format, need to have try/except here
             job_end_time_obj = datetime.datetime.strptime(job_end_time, "%c")
             time_now = datetime.datetime.now()
             time_elapsed = time_now - job_end_time_obj
@@ -274,7 +309,9 @@ class Job(object):
 
         self.completion_validations.update(validation_dict)
         self.validations = json.dumps(self.completion_validations, indent = 4)
-        self.completions = '{0}\n{1}\n'.format(self.__repr__(), self.validations)
+        # self.completions = '{0}\n{1}\n'.format(self.__repr__(), self.validations)
+        self.completions = self._completions() + self.validations
+
 
     def validate_completion(self, job_id = None, *args, **kwargs):
         '''
@@ -412,7 +449,7 @@ class Job(object):
 
 
 # ~~~~~~ JOB FUNCTIONS ~~~~~ #
-def submit(verbose = False, *args, **kwargs):
+def submit(verbose = False, log_dir = None, monitor = False, validate = False, *args, **kwargs):
     '''
     Main function for submitting a qsub job
     passes args to 'submit_job'
@@ -420,9 +457,33 @@ def submit(verbose = False, *args, **kwargs):
 
     job = submit(command = '', ...)
     '''
+    # check if log_dir was passed
+    if log_dir:
+        # create the dir if it doesnt exist already
+        t.mkdirs(log_dir)
+        # only continue if the log_dir exists now
+        if not t.item_exists(item = log_dir, item_type = 'dir'):
+            logger.warning('log_dir does not exist and will not be used for qsub job submission; {0}'.format(log_dir))
+        else:
+            # resolve the path to the full, expanded, absolute, real path - bad log_dir paths break job submissions easily
+            log_dir = os.path.realpath(os.path.expanduser(log_dir))
+            stdout_log_dir = log_dir
+            stderr_log_dir = log_dir
+            kwargs.update({
+                'stdout_log_dir': stdout_log_dir,
+                'stderr_log_dir': stderr_log_dir
+                })
+
     proc_stdout = submit_job(return_stdout = True, verbose = verbose, *args, **kwargs)
     job_id, job_name = get_job_ID_name(proc_stdout)
-    job = Job(id = job_id, name = job_name)
+    job = Job(id = job_id, name = job_name, log_dir = log_dir)
+
+    # optionally, monitor the job to completion
+    if monitor:
+        monitor_jobs(jobs = [job], **kwargs)
+    # optionally, validate the job completion
+    if validate:
+        job.validate_completion()
     return(job)
 
 
@@ -452,25 +513,31 @@ def get_job_ID_name(proc_stdout):
     return((job_id, job_name))
 
 
-def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = '${PWD}', stderr_log_dir = '${PWD}', return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False):
+def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = None, stderr_log_dir = None, return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False, **kwargs):
     '''
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
+
+    NOTE: stdout_log_dir and stderr_log_dir paths MUST have a trailing slash!!
     '''
+    if not stdout_log_dir:
+        stdout_log_dir = os.path.join(os.getcwd(), '')
+    if not stderr_log_dir:
+        stderr_log_dir = os.path.join(os.getcwd(), '')
     qsub_command = '''
-qsub {0} -N {1} -o :{2}/ -e :{3}/ <<E0F
+qsub {0} -N "{1}" -o :"{2}" -e :"{3}" <<E0F
 {4}
 {5}
 {6}
 E0F
 '''.format(
-params,
-name,
-stdout_log_dir,
-stderr_log_dir,
-pre_commands,
-command,
-post_commands
+params,  # 0
+name, # 1
+stdout_log_dir, # 2
+stderr_log_dir, # 3
+pre_commands, # 4
+command, # 5
+post_commands # 6
 )
     if verbose == True:
         logger.debug('qsub command is:\n{0}'.format(qsub_command))
@@ -489,7 +556,7 @@ post_commands
     elif return_stdout == False:
         logger.debug(proc_stdout)
 
-def monitor_jobs(jobs = None, kill_err = True, print_verbose = False):
+def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
     '''
     Monitor a list of qsub Job objects for completion
     make sure that all jobs are present in the qstat output
@@ -688,7 +755,11 @@ def demo_qsub():
     '''
     Demo the qsub code functions
 
-    >>> import qsub; job = qsub.submit(print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
+    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
+
+    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True); job.validate_completion()
+
+    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True, validate = True)
     '''
     print('running single-job demo')
 
