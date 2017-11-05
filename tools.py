@@ -271,6 +271,9 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t', inverse = 
 
 
 def copy_and_overwrite(from_path, to_path):
+    '''
+    copy a directory tree to a new locaiton and overwrite if it already exits
+    '''
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
     shutil.copytree(from_path, to_path)
