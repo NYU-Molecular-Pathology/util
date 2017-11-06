@@ -82,7 +82,7 @@ class Job(object):
         e.g.: python.o4088513
         '''
         if not self.log_dir:
-            logger.error('log_dir attribute is not set for this qsub job')
+            logger.warning('log_dir attribute is not set for this qsub job')
             return(None)
         type_key = {'stdout': '.o', 'stderr': '.e'}
         type_char = type_key[_type]
