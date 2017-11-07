@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 General utility functions and classes for the program
-'''
+"""
 import sys
 import os
 import csv
@@ -19,26 +19,26 @@ logger.debug("loading tools module")
 
 # ~~~~ CUSTOM CLASSES ~~~~~~ #
 class Container(object):
-    '''
+    """
     basic container for information
-    '''
+    """
     pass
 
 class SubprocessCmd(object):
-    '''
+    """
     A command to be run in subprocess
 
     run_cmd = SubprocessCmd(command = command).run()
-    '''
+    """
     def __init__(self, command):
         self.command = command
 
     def run(self, command = None):
-        '''
+        """
         Run the command, capture the process object
 
         # universal_newlines=True required for Python 2 3 compatibility with stdout parsing
-        '''
+        """
         if not command:
             command = self.command
         if command:
@@ -52,13 +52,13 @@ class SubprocessCmd(object):
 
 
 class DirHop(object):
-    '''
+    """
     A class for executing commands in the context of a different working directory
     adapted from: https://mklammler.wordpress.com/2011/08/14/safe-directory-hopping-with-python/
 
     with DirHop('/some/dir') as d:
         do_something()
-    '''
+    """
     def __init__(self, directory):
         self.old_dir = os.getcwd()
         self.new_dir = directory
@@ -77,7 +77,7 @@ compare = lambda x, y: collections.Counter(x) == collections.Counter(y)
 # compare two obects
 
 def my_debugger(vars):
-    '''
+    """
     starts interactive Python terminal at location in script
     very handy for debugging
     call this function with
@@ -85,7 +85,7 @@ def my_debugger(vars):
     anywhere in the body of the script, or
     my_debugger(locals().copy())
     within a script function
-    '''
+    """
     import readline # optional, will allow Up/Down/History in the console
     import code
     # vars = globals().copy() # in python "global" variables are actually module-level
@@ -105,23 +105,23 @@ def subprocess_cmd(command, return_stdout = False):
         logger.debug(proc_stdout)
 
 def timestamp():
-    '''
+    """
     Return a timestamp string
-    '''
+    """
     import datetime
     return('{:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now()))
 
 def print_dict(mydict):
-    '''
+    """
     pretty printing for dict entries
-    '''
+    """
     for key, value in mydict.items():
         logger.debug('{}: {}\n\n'.format(key, value))
 
 def mkdirs(path, return_path=False):
-    '''
+    """
     Make a directory, and all parent dir's in the path
-    '''
+    """
     import sys
     import os
     import errno
@@ -136,9 +136,9 @@ def mkdirs(path, return_path=False):
         return path
 
 def write_dicts_to_csv(dict_list, output_file):
-    '''
+    """
     write a list of dicts to a CSV file
-    '''
+    """
     import csv
     with open(output_file, 'w') as outfile:
         fp = csv.DictWriter(outfile, dict_list[0].keys())
@@ -146,10 +146,10 @@ def write_dicts_to_csv(dict_list, output_file):
         fp.writerows(dict_list)
 
 def backup_file(input_file, return_path=False, sys_print = False, use_logger = None):
-    '''
+    """
     backup a file by moving it to a folder called 'old' and appending a timestamp
     use_logger is a logger object to log to
-    '''
+    """
     if use_logger:
         logger = use_logger
     if os.path.isfile(input_file):
@@ -159,10 +159,10 @@ def backup_file(input_file, return_path=False, sys_print = False, use_logger = N
         mkdirs(os.path.dirname(new_filename))
         logger.debug('\nBacking up old file:\n{0}\n\nTo location:\n{1}\n'.format(input_file, new_filename))
         if sys_print == True:
-            logger.debug('''
+            logger.debug("""
 To undo this, run the following command:\n
 mv {0} {1}
-'''.format(os.path.abspath(input_file), new_filename)
+""".format(os.path.abspath(input_file), new_filename)
             )
         os.rename(input_file, new_filename)
     if return_path:
@@ -185,9 +185,9 @@ def load_json(input_file):
     return my_item
 
 def update_json(data, input_file):
-    '''
+    """
     Add new data to an existing JSON file, or create the file if it doesnt exist
-    '''
+    """
     if not item_exists(item = input_file):
         write_json(object = data, output_file = input_file)
     else:
@@ -196,11 +196,11 @@ def update_json(data, input_file):
         write_json(object = old_data, output_file = input_file)
 
 def item_exists(item, item_type = 'any', n = False):
-    '''
+    """
     Check that an item exists
     item_type is 'any', 'file', 'dir'
     n is True or False and negates 'exists'
-    '''
+    """
     exists = False
     if item_type == 'any':
         exists = os.path.exists(item)
@@ -213,19 +213,19 @@ def item_exists(item, item_type = 'any', n = False):
     return(exists)
 
 def reply_to_address(servername, username = None):
-    '''
+    """
     Get the email address to use for the 'reply to' field in emails
-    '''
+    """
     if not username:
         username = getpass.getuser()
     address = username + '@' + servername
     return(address)
 
 def num_lines(input_file, skip = 0):
-    '''
+    """
     Count the number of lines in a file
     TODO: add tests for this one
-    '''
+    """
     with open(input_file, 'r') as f:
         lines = f.read()
         num = lines.count('\n')
@@ -233,13 +233,13 @@ def num_lines(input_file, skip = 0):
     return(num)
 
 def write_tabular_overlap(file1, ref_file, output_file, delim = '\t', inverse = False):
-    '''
+    """
     Find matching entries between two tabular files
     Write out all the entries in 'file1' that are found in the 'ref_file'
     save entries to the output_file
     both 'file1' and 'ref_file' must have headers in common
     inverse = True write out entries in file1 that are not in ref_file
-    '''
+    """
     # the column names from the files to preserve their order for writing
     ref_colnames = None
     file1_colnames = None
@@ -271,9 +271,9 @@ def write_tabular_overlap(file1, ref_file, output_file, delim = '\t', inverse = 
 
 
 def copy_and_overwrite(from_path, to_path):
-    '''
+    """
     copy a directory tree to a new locaiton and overwrite if it already exits
-    '''
+    """
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
     shutil.copytree(from_path, to_path)

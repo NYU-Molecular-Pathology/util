@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Functions for finding files and dirs
 
 tested with python 2.7
-'''
+"""
 
 import logging
 logger = logging.getLogger("find")
@@ -18,13 +18,13 @@ import fnmatch
 from collections import defaultdict
 
 def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), search_type = 'all', num_limit = None, level_limit = None, match_mode = "any"):
-    '''
+    """
     Function to search for
     num_limit is the number of matches to return; use None for no limit
     level_limit is the number of directory levels to recurse; 0 is parent dir only
     match_mode is 'any' or 'all'; match any of the provided inclusion_patterns, or all of them
     search_type = 'all', 'file', or 'dir'; type of items to find
-    '''
+    """
     import sys
     import itertools
     if num_limit != None:
@@ -40,10 +40,10 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
         return(matches)
 
 def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), search_type = 'all', level_limit = None, match_mode = "any"):
-    '''
+    """
     Generator function to return file matches
     search_type = 'all', 'file', or 'dir'
-    '''
+    """
     import os
     import sys
     import fnmatch
@@ -73,23 +73,23 @@ def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), s
 
 
 def super_filter(names, inclusion_patterns = ('*',), exclusion_patterns = (), match_mode = "any"):
-    '''
+    """
     Enhanced version of fnmatch.filter() that accepts multiple inclusion and exclusion patterns.
 
     Filter the input names by choosing only those that are matched by
     some pattern in inclusion_patterns _and_ not by any in exclusion_patterns.
     Adapted from:
     https://codereview.stackexchange.com/questions/74713/filtering-with-multiple-inclusion-and-exclusion-patterns
-    '''
+    """
     included = multi_filter(names, patterns = inclusion_patterns, match_mode = match_mode)
     excluded = multi_filter(names, patterns = exclusion_patterns, match_mode = match_mode)
     for item in set(included) - set(excluded):
         yield(item)
 
 def multi_filter(names, patterns, match_mode = "any"):
-    '''
+    """
     Generator function which yields the names that match one or more of the patterns.
-    '''
+    """
     # logger.debug("Filtering {0} against {1}; match_mode: {2}".format(names, patterns, match_mode))
     for name in names:
         basename = os.path.basename(name)
@@ -118,9 +118,9 @@ def multi_filter(names, patterns, match_mode = "any"):
 # deprecated
 
 def find_files(search_dir, search_filename):
-    '''
+    """
     return the paths to all files matching the supplied filename in the search dir
-    '''
+    """
     import os
     logger.debug('Now searching for file "{0}" in directory {1}'.format(search_filename, search_dir))
     file_list = []
@@ -133,14 +133,14 @@ def find_files(search_dir, search_filename):
     return(file_list)
 
 def walklevel(some_dir, level=1):
-    '''
+    """
     Recursively search a directory for all items up to a given depth
     use it like this:
     file_list = []
     for item in pf.walklevel(some_dir):
         if ( item.endswith('my_file.txt') and os.path.isfile(item) ):
             file_list.append(item)
-    '''
+    """
     import os
     some_dir = some_dir.rstrip(os.path.sep)
     assert os.path.isdir(some_dir)

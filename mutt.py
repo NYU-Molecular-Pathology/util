@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''
+"""
 This script provides a flexible wrapper for mailing files from a remote server with mutt
 
 USAGE: mutt.py -s "Subject line" -r "address1@gmail.com, address2@gmail.com" -rt "my.address@internets.com" -m "This is my email message" /path/to/attachment1.txt /path/to/attahment2.txt
@@ -12,7 +12,7 @@ recipient_list="address1@gmail.com, address2@gmail.com"
 mutt -s "$SUBJECT_LINE" -a "$attachment_file" -a "$summary_file" -a "$zipfile" -- "$recipient_list" <<E0F
 email message HERE
 E0F
-'''
+"""
 
 
 # ~~~~ LOAD PACKAGES ~~~~~~ #
@@ -24,20 +24,20 @@ import getpass
 
 # ~~~~ CUSTOM FUNCTIONS ~~~~~~ #
 def subprocess_cmd(command):
-    '''
+    """
     Runs a terminal command with stdout piping enabled
-    '''
+    """
     import subprocess as sp
     process = sp.Popen(command,stdout=sp.PIPE, shell=True)
     proc_stdout = process.communicate()[0].strip()
     print(proc_stdout)
 
 def make_attachement_string(attachment_files):
-    '''
+    """
     Return a string to use to in the mutt command to include attachment files
     ex:
     -a "$attachment_file" -a "$summary_file" -a "$zipfile"
-    '''
+    """
     attachment_strings = []
     if len(attachment_files) > 0:
         for file in attachment_files:
@@ -47,9 +47,9 @@ def make_attachement_string(attachment_files):
     return(attachment_string)
 
 def get_file_contents(file):
-    '''
+    """
     Return a string containing all lines in the file
-    '''
+    """
     lines_list = []
     with open(file) as f:
         for line in f:
@@ -57,30 +57,30 @@ def get_file_contents(file):
     return(''.join(lines_list))
 
 def get_reply_to_address(server):
-    '''
+    """
     Get the email address to use for the 'reply to' field in the email
     needs to be supplied with a server name
-    '''
+    """
     username = getpass.getuser()
     address = username + '@' + server
     return(address)
 
 def mutt_mail(recipient_list, reply_to = '', subject_line = '[mutt.py]', message = '~ This message was sent by the mutt.py email script ~', message_file = None, attachment_files = [], return_only_mode = False, quiet = False):
-    '''
+    """
     Main control function for the program
     Send the message with mutt
 
     recipient_list = character string; Format is 'address1@gmail.com, address2@gmail.com'
-    '''
+    """
     if message_file != None:
         message = get_file_contents(message_file)
     attachment_string = make_attachement_string(attachment_files)
-    command = '''
+    command = """
 export EMAIL="{0}"
 
 mutt -s "{1}" {2} -- "{3}" <<E0F
 {4}
-E0F'''.format(reply_to, subject_line, attachment_string, recipient_list, message) # message.replace('\n', "$'\n'")
+E0F""".format(reply_to, subject_line, attachment_string, recipient_list, message) # message.replace('\n', "$'\n'")
     if quiet == False: print('Email command is:\n{0}\n'.format(command))
     if return_only_mode == False:
         if quiet == False: print('Running command, sending email...')
@@ -89,10 +89,10 @@ E0F'''.format(reply_to, subject_line, attachment_string, recipient_list, message
         return(command)
 
 def run():
-    '''
+    """
     Run the monitoring program
     arg parsing goes here, if program was run as a script
-    '''
+    """
 
     # ~~~~ GET SCRIPT ARGS ~~~~~~ #
     parser = argparse.ArgumentParser(description='Mutt email wrapper')

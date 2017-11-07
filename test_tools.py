@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 unit tests for the find module
-'''
+"""
 import unittest
 import os
 import tools as t
@@ -90,9 +90,9 @@ class TestNumLines(unittest.TestCase):
         self.assertTrue(t.num_lines(input_file = input_file, skip = 1) == 366)
 
 class TestWriteTabularOverlap(unittest.TestCase):
-    '''
+    """
     write_tabular_overlap
-    '''
+    """
     def test_full_overlap(self):
         file1 = os.path.join(fixture_dir, 'variants_head200.tsv')
         ref_file = os.path.join(fixture_dir, 'variants_ref.tsv')

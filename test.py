@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Run all the unit tests
-'''
+"""
 
 import unittest
 

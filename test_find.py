@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 unit tests for the find module
-'''
+"""
 import unittest
 from find import multi_filter
 from find import super_filter

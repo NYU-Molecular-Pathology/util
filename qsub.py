@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
 A collection of functions for submitting jobs to the NYUMC SGE compute cluster with 'qsub' from within Python, and monitoring them until completion
 
 based on https://github.com/stevekm/pyqsub/tree/59c607d72a5b41d4804a969f9d543a89a41e39e6
 
 modified for use with run-monitor system
-'''
+"""
 import logging
 logger = logging.getLogger("qsub")
 logger.debug("loading qsub module")
@@ -38,13 +38,13 @@ job_state_key['dr'] = None # running jobs submitted for deletion
 
 # ~~~~ CUSTOM CLASSES ~~~~~~ #
 class Job(object):
-    '''
+    """
     A class to track a qsub job that has been submitted
 
     x = qsub.Job('2379768')
     x.running()
     x.present()
-    '''
+    """
     def __init__(self, id, name = None, log_dir = None, debug = False):
         global job_state_key
         self.job_state_key = job_state_key
@@ -64,23 +64,23 @@ class Job(object):
 
     # ~~~~~ Methods for determining running job state from qstat ~~~~~ #
     def _completions(self):
-        '''
+        """
         Make the default 'completions' string
-        '''
+        """
         return('{0}\nlog_paths = {1}\n'.format(self.__repr__(), self.log_paths))
 
     def update_log_files(self, _type = 'stdout'):
-        '''
+        """
         Update the paths to the log files
-        '''
+        """
         log_path = self.get_log_file(_type = _type)
         self.log_paths.update({_type: log_path})
 
     def get_log_file(self, _type = 'stdout'):
-        '''
+        """
         Return the expected path to the job's log file
         e.g.: python.o4088513
-        '''
+        """
         if not self.log_dir:
             logger.warning('log_dir attribute is not set for this qsub job: {0}'.format((self.id, self.name)))
             return(None)
@@ -94,9 +94,9 @@ class Job(object):
 
 
     def get_job(self, id, qstat_stdout = None):
-        '''
+        """
         Retrieve the job's qstat entry
-        '''
+        """
         import re
         try:
             from sh import qstat
@@ -109,9 +109,9 @@ class Job(object):
         return(entry)
 
     def get_status(self, id, entry = None, qstat_stdout = None):
-        '''
+        """
         Get the status of the qsub job
-        '''
+        """
         import re
         # regex for the pattern matching https://docs.python.org/2/library/re.html
         job_id_pattern = r"^.*\s*{0}.*\s([a-zA-Z]+)\s.*$".format(id)
@@ -124,35 +124,35 @@ class Job(object):
             return(status)
 
     def get_state(self, status, job_state_key):
-        '''
+        """
         Get the interpretation of the job's status
-        '''
+        """
         # defaultdict returns None if the key is not present
         state = job_state_key[str(status)]
         return(state)
 
     def get_is_running(self, state, job_state_key):
-        '''
+        """
         Check if the job is considered to be running
-        '''
+        """
         is_running = False
         if state in ['Running']:
             is_running = True
         return(is_running)
 
     def get_is_error(self, state, job_state_key):
-        '''
+        """
         Check if the job is considered to in an error state
-        '''
+        """
         is_running = False
         if state in ['Error']:
             is_running = True
         return(is_running)
 
     def get_is_present(self, id, entry = None, qstat_stdout = None):
-        '''
+        """
         Find out if a job is present in qsub
-        '''
+        """
         if not entry:
             entry = self.get_job(id = id, qstat_stdout = qstat_stdout)
         if entry:
@@ -161,9 +161,9 @@ class Job(object):
             return(False)
 
     def _update(self):
-        '''
+        """
         Update the object's status attributes
-        '''
+        """
         self.qstat_stdout = qstat()
         self.entry = self.get_job(id = self.id, qstat_stdout = self.qstat_stdout)
         self.status = self.get_status(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
@@ -173,9 +173,9 @@ class Job(object):
         self.is_present = self.get_is_present(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
 
     def _debug_update(self, qstat_stdout):
-        '''
+        """
         Debug update mode with requires a qstat_stdout to be passed
-        '''
+        """
         self.qstat_stdout = qstat_stdout
         self.entry = self.get_job(id = self.id, qstat_stdout = self.qstat_stdout)
         self.status = self.get_status(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
@@ -184,32 +184,32 @@ class Job(object):
         self.is_present = self.get_is_present(id = self.id, entry = self.entry, qstat_stdout = self.qstat_stdout)
 
     def running(self):
-        '''
+        """
         Return the most recent running state of the job
-        '''
+        """
         self._update()
         return(self.is_running)
 
     def error(self):
-        '''
+        """
         Return the most recent error state of the job
-        '''
+        """
         self._update()
         return(self.is_error)
 
     def present(self):
-        '''
+        """
         Return the most recent presence or absence of the job
-        '''
+        """
         self._update()
         return(self.is_present)
 
     # ~~~~~ Methods for querying qacct for job completion status ~~~~~ #
     def get_qacct(self, job_id = None):
-        '''
+        """
         get the qacct entry for a completed qsub job
         WARNING: This is extremely slow!! 10 - 30+ seconds
-        '''
+        """
         if not job_id:
             job_id = self.id
         qacct_command = 'qacct -j {0}'.format(job_id)
@@ -217,12 +217,12 @@ class Job(object):
         return(run_cmd.proc_stdout)
 
     def qacct2dict(self, proc_stdout = None, entry_delim = None):
-        '''
+        """
         convert text output from qacct into a dictionary for parsing
         qacct returns multiple entries per job_id, because the job_id
         numbers wrap around so multiple historic jobs have had the same number
         each job entry for a given number is separated by a large delimiter string
-        '''
+        """
         if not proc_stdout:
             proc_stdout = self.get_qacct()
         # entries for jobs in the qacct stdout are split with this character string
@@ -245,7 +245,7 @@ class Job(object):
         return(entry_dict)
 
     def filter_qacct(self, qacct_dict = None, days_limit = 7, username = None):
-        '''
+        """
         filter out 'bad' entries from the dict
         since the qacct_dict contains historic entries with the same job_id,
         we need to filter them out
@@ -260,7 +260,7 @@ class Job(object):
 
         ultimately, we need to make sure that only one entry exists in this dict
         corresponding to the correct entry for this job
-        '''
+        """
         if not username:
             username = getpass.getuser()
 
@@ -288,24 +288,24 @@ class Job(object):
         return(qacct_dict)
 
     def get_qacct_job_failed_status(self, failed_entry):
-        '''
+        """
         Special parsing for the 'failed' entry in qacct output
         because its not a plain digit value its got some weird text description stuck in there too sometimes
 
         {'failed': '100 : assumedly after job'}
 
         return the first int after splitting on the first whitespace
-        '''
+        """
         # get the first entry in the line split by whitespace
         value = failed_entry.split(None, 1)[0]
         value = int(value)
         return(value)
 
     def update_completion_validations(self, validation_dict):
-        '''
+        """
         Update a dict of validation stats
         and its text string representation
-        '''
+        """
 
         self.completion_validations.update(validation_dict)
         self.validations = json.dumps(self.completion_validations, indent = 4)
@@ -314,9 +314,9 @@ class Job(object):
 
 
     def validate_completion(self, job_id = None, *args, **kwargs):
-        '''
+        """
         Check if the qsub job completed successfully
-        '''
+        """
         if not job_id:
             job_id = self.id
 
@@ -450,13 +450,13 @@ class Job(object):
 
 # ~~~~~~ JOB FUNCTIONS ~~~~~ #
 def submit(verbose = False, log_dir = None, monitor = False, validate = False, *args, **kwargs):
-    '''
+    """
     Main function for submitting a qsub job
     passes args to 'submit_job'
     returns a Jobs object for the job
 
     job = submit(command = '', ...)
-    '''
+    """
     # check if log_dir was passed
     if log_dir:
         # create the dir if it doesnt exist already
@@ -499,12 +499,12 @@ def subprocess_cmd(command, return_stdout = False):
 
 
 def get_job_ID_name(proc_stdout):
-    '''
+    """
     return a tuple of the form (<id number>, <job name>)
     usage:
     proc_stdout = submit_job(return_stdout = True) # 'Your job 1245023 ("python") has been submitted'
     job_id, job_name = get_job_ID_name(proc_stdout)
-    '''
+    """
     proc_stdout_list = proc_stdout.split()
     job_id = proc_stdout_list[2]
     job_name = proc_stdout_list[3]
@@ -514,23 +514,23 @@ def get_job_ID_name(proc_stdout):
 
 
 def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = None, stderr_log_dir = None, return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False, **kwargs):
-    '''
+    """
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
 
     NOTE: stdout_log_dir and stderr_log_dir paths MUST have a trailing slash!!
-    '''
+    """
     if not stdout_log_dir:
         stdout_log_dir = os.path.join(os.getcwd(), '')
     if not stderr_log_dir:
         stderr_log_dir = os.path.join(os.getcwd(), '')
-    qsub_command = '''
+    qsub_command = """
 qsub {0} -N "{1}" -o :"{2}" -e :"{3}" <<E0F
 {4}
 {5}
 {6}
 E0F
-'''.format(
+""".format(
 params,  # 0
 name, # 1
 stdout_log_dir, # 2
@@ -557,7 +557,7 @@ post_commands # 6
         logger.debug(proc_stdout)
 
 def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
-    '''
+    """
     Monitor a list of qsub Job objects for completion
     make sure that all jobs are present in the qstat output
     if a job is absent or is in error state, remove it from the list of jobs
@@ -573,7 +573,7 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
 
     jobs is a list of qsub Job objects
     kill_err = kill Jobs left in error state
-    '''
+    """
     # make sure jobs were passed
     if not jobs or len(jobs) < 1:
         logger.error('No jobs to monitor')
@@ -621,7 +621,7 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
 
 
 def find_all_job_id_names(text):
-    '''
+    """
     Search a multi-line character string for all qsub job messages
     text is a single text that contains multiple line
 
@@ -630,7 +630,7 @@ def find_all_job_id_names(text):
 
     [(job_id, job_name) for job_id, job_name in find_all_job_id_names(text)]
     >> [('3947957', 'sns.wes.SeraCare-1to1-Positive')]
-    '''
+    """
     # split the lines
     text_lines = text.split('\n')
     for line in text_lines:
@@ -646,17 +646,17 @@ def find_all_job_id_names(text):
 
 # ~~~~~~ COMPLETED JOB VALIDATION ~~~~~ #
 def get_qacct(job_id):
-    '''
+    """
     get the qacct entry for a completed qsub job
-    '''
+    """
     qacct_command = 'qacct -j {0}'.format(job_id)
     run_cmd = t.SubprocessCmd(command = qacct_command).run()
     return(run_cmd.proc_stdout)
 
 def qacct2dict(proc_stdout):
-    '''
+    """
     convert text output from qacct into a dictionary for parsing
-    '''
+    """
     entry_dict = {}
     entry_delim = '=============================================================='
     entries = [c for c in proc_stdout.split(entry_delim) if c != '']
@@ -671,9 +671,9 @@ def qacct2dict(proc_stdout):
 
 
 def filter_qacct(qacct_dict, days_limit = 7):
-    '''
+    """
     filter out 'bad' entries from the dict
-    '''
+    """
     username = getpass.getuser()
     if qacct_dict:
         for key, subdict in qacct_dict.items():
@@ -694,21 +694,21 @@ def filter_qacct(qacct_dict, days_limit = 7):
     return(qacct_dict)
 
 def get_qacct_job_failed_status(failed_entry):
-    '''
+    """
     Special parsing for the 'failed' entry in qacct output
     because its not a plain digit value its got some weird text description stuck in there too sometimes
 
     {'failed': '100 : assumedly after job'}
-    '''
+    """
     # get the first entry in the line split by whitespace
     value = failed_entry.split(None, 1)[0]
     value = int(value)
     return(value)
 
 def validate_job_completion(job_id):
-    '''
+    """
     Check if a qsub job completed successfully
-    '''
+    """
     # get the results of the qacct query command
     proc_stdout = get_qacct(job_id = job_id)
     # convert it into a dict
@@ -752,7 +752,7 @@ def validate_job_completion(job_id):
 
 # ~~~~~~ DEMO FUNCTIONS ~~~~~ #
 def demo_qsub():
-    '''
+    """
     Demo the qsub code functions
 
     import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
@@ -760,14 +760,14 @@ def demo_qsub():
     import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True); job.validate_completion()
 
     import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True, validate = True)
-    '''
+    """
     print('running single-job demo')
 
-    command = '''
+    command = """
     set -x
     cat /etc/hosts
     sleep 10
-    '''
+    """
 
     job = submit(command = command, print_verbose = True)
     print('job id: {0}'.format(job.id))
@@ -786,19 +786,19 @@ def demo_qsub():
     return()
 
 def demo_multi_qsub(job_num = 3):
-    '''
+    """
     Demo the qsub code functions
-    '''
+    """
     job_num = int(job_num)
 
     print('running multi-job demo')
 
-    command = '''
+    command = """
     set -x
     cat /etc/hosts
     sleep 10
     sleep $((1 + RANDOM % 10))
-    '''
+    """
 
     # list to capture the jobs as they are created
     jobs = []
