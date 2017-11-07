@@ -150,7 +150,7 @@ def multi_filter(names, patterns, match_mode = "any"):
 
 def find_files(search_dir, search_filename):
     """
-    return the paths to all files matching the supplied filename in the search dir
+    deprecated function that returns the paths to all files matching the supplied filename in the search dir
     """
     import os
     logger.debug('Now searching for file "{0}" in directory {1}'.format(search_filename, search_dir))
@@ -165,12 +165,16 @@ def find_files(search_dir, search_filename):
 
 def walklevel(some_dir, level=1):
     """
-    Recursively search a directory for all items up to a given depth
-    use it like this:
-    file_list = []
-    for item in pf.walklevel(some_dir):
-        if ( item.endswith('my_file.txt') and os.path.isfile(item) ):
-            file_list.append(item)
+    deprecated function that recursively searches a directory for all items up to a given depth
+
+    Examples
+    ----------
+    Example usage::
+    
+        file_list = []
+        for item in pf.walklevel(some_dir):
+            if (item.endswith('my_file.txt') and os.path.isfile(item) ):
+                file_list.append(item)
     """
     import os
     some_dir = some_dir.rstrip(os.path.sep)
