@@ -21,14 +21,20 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
 
     Parameters
     ----------
+    search_dir: str
+        path to the directory in which to search for files and subdirectories
+    inclusion_patterns: list or tuple
+        a list or tuple of patterns to match files/dirs against for inclusion in match output
+    exclusion_patterns: list or tuple
+        a list or tuple of patterns to match files/dirs against for exclusion from match output
     num_limit: int
         the number of matches to return; use `None` for no limit
     level_limit: int
         the number of directory levels to recurse; 0 is parent dir only
     match_mode:
-        `'any'` or `'all'`; matches any of the provided inclusion_patterns, or all of them
+        'any' or 'all'; matches any of the provided inclusion_patterns, or all of them
     search_type:
-        `'all'`, `'file'`, or `'dir'`; type of items to find
+        'all', 'file', or 'dir'; type of items to find
 
     Returns
     -------
@@ -51,8 +57,22 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
 
 def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), search_type = 'all', level_limit = None, match_mode = "any"):
     """
-    Generator function to return file matches
-    search_type = 'all', 'file', or 'dir'
+    Generator function to return file matches. Used internally by `find`
+
+    Parameters
+    ----------
+    search_dir: str
+        path to the directory in which to search for files and subdirectories
+    inclusion_patterns: list or tuple
+        a list or tuple of patterns to match files/dirs against for inclusion in match output
+    exclusion_patterns: list or tuple
+        a list or tuple of patterns to match files/dirs against for exclusion from match output
+    level_limit: int
+        the number of directory levels to recurse; 0 is parent dir only
+    match_mode:
+        'any' or 'all'; matches any of the provided inclusion_patterns, or all of them
+    search_type:
+        'all', 'file', or 'dir'; type of items to find
     """
     import os
     import sys
@@ -84,10 +104,11 @@ def find_gen(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), s
 
 def super_filter(names, inclusion_patterns = ('*',), exclusion_patterns = (), match_mode = "any"):
     """
-    Enhanced version of fnmatch.filter() that accepts multiple inclusion and exclusion patterns.
+    Enhanced version of `fnmatch.filter()` that accepts multiple inclusion and exclusion patterns.
 
     Filter the input names by choosing only those that are matched by
-    some pattern in inclusion_patterns _and_ not by any in exclusion_patterns.
+    some pattern in `inclusion_patterns` _and_ not by any in `exclusion_patterns`.
+
     Adapted from:
     https://codereview.stackexchange.com/questions/74713/filtering-with-multiple-inclusion-and-exclusion-patterns
     """
