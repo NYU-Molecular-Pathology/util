@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-A collection of functions for submitting jobs to the NYUMC SGE compute cluster with 'qsub' from within Python, and monitoring them until completion
+A collection of functions and objects for submitting jobs to the NYUMC SGE compute cluster with `qsub` from within Python, and monitoring them until completion
 
-based on https://github.com/stevekm/pyqsub/tree/59c607d72a5b41d4804a969f9d543a89a41e39e6
-
-modified for use with run-monitor system
+This submodule can also be run as a stand-along demo script
 """
 import logging
 logger = logging.getLogger("qsub")
@@ -27,25 +25,49 @@ except:
 import tools as t
 
 # ~~~~ GLOBALS ~~~~~~ #
-# possible qsub job states; default is None
 job_state_key = defaultdict(lambda: None)
-job_state_key['Eqw'] = 'Error' # job in error status that never started running
+"""
+dictionary containing possible qsub job states; default state is None
+
+format `key: value`, where `key` is the character string representation of the job state provided by `qstat` output, and `value` is a description of the state.
+
+Recognized Job States
+---------------------
+`Eqw`: `Error`; the job is in an error status and never started running
+`r`: `Running`; the job is currently running
+`qw`: `Waiting`; the job is currently in the scheduler queue waiting to run
+`t`: `None`; ???
+`dr`: `None`; the job has been submitted for deletion and will be deleted
+"""
+job_state_key['Eqw'] = 'Error'
 job_state_key['r'] = 'Running'
-job_state_key['qw'] = 'Waiting' # 'queue wait' job waiting to run
-job_state_key['t'] = None # ???
-job_state_key['dr'] = None # running jobs submitted for deletion
+job_state_key['qw'] = 'Waiting'
+job_state_key['t'] = None
+job_state_key['dr'] = None
 
 
 # ~~~~ CUSTOM CLASSES ~~~~~~ #
 class Job(object):
     """
-    A class to track a qsub job that has been submitted
+    Main object class for tracking and validating a compute job that has been submitted to the HPC cluster with the `qsub` command
 
     x = qsub.Job('2379768')
     x.running()
     x.present()
     """
     def __init__(self, id, name = None, log_dir = None, debug = False):
+        """
+        Parameters
+        ----------
+        id: int
+            the numeric job ID returned by `qsub` at job submission
+        name: str
+            the name given to the compute job
+        log_dir: str
+            path to the directory used to hold log output by the compute job
+        debug: bool
+            intialize the job without immediately querying `qstat` to determine job status
+        """
         global job_state_key
         self.job_state_key = job_state_key
         self.id = id
