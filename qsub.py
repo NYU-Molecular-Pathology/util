@@ -682,8 +682,10 @@ def get_job_ID_name(proc_stdout):
     Examples
     --------
     Example usage::
+
         proc_stdout = submit_job(return_stdout = True) # 'Your job 1245023 ("python") has been submitted'
         job_id, job_name = get_job_ID_name(proc_stdout)
+
     """
     proc_stdout_list = proc_stdout.split()
     job_id = proc_stdout_list[2]
