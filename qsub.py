@@ -55,7 +55,9 @@ class Job(object):
     """
     Main object class for tracking and validating a compute job that has been submitted to the HPC cluster with the `qsub` command
 
-
+    Notes
+    -----
+    The default action upon initialization is to query `qstat` to determine whether the job is currently running. After a job has completed, built-in methods can be used to query `qacct -j` to determine if the job finished with a successful exit status. Both `qstat` and `qacct` are queried by making system calls to the the corresponding programs and parsing their stdout messages.
 
     Examples
     ----------
@@ -77,6 +79,21 @@ class Job(object):
             path to the directory used to hold log output by the compute job
         debug: bool
             intialize the job without immediately querying `qstat` to determine job status
+
+        Attributes
+        ----------
+        job_state_key: dict
+            the module's `job_state_key` object
+        id: int
+            a numeric ID for the Job object
+        name: str
+            a name for the Job
+        log_dir: str
+            path to the directory used to hold log output by the compute job
+        log_paths: dict
+            dictionary containing the types and paths to the job's output logs
+        completions: str
+            character string used to describe the job and its completion states
         """
         global job_state_key
         self.job_state_key = job_state_key
@@ -97,21 +114,35 @@ class Job(object):
     # ~~~~~ Methods for determining running job state from qstat ~~~~~ #
     def _completions(self):
         """
-        Make a default 'completions' string attribute
+        Makes a default 'completions' string attribute
+
+        Returns
+        -------
+        str
+            character string describing the object and its qsub log paths
         """
         return('{0}\nlog_paths = {1}\n'.format(self.__repr__(), self.log_paths))
 
     def update_log_files(self, _type = 'stdout'):
         """
-        Update the paths to the log files
+        Updates the paths to the log files in the `log_paths` attribute
         """
         log_path = self.get_log_file(_type = _type)
         self.log_paths.update({_type: log_path})
 
     def get_log_file(self, _type = 'stdout'):
         """
-        Return the expected path to the job's log file
-        e.g.: python.o4088513
+        Returns the expected path to the job's log file
+
+        Parameters
+        ----------
+        _type: str
+            either 'stdout' or 'stderr', representing the type of log path to generate
+
+        Notes
+        -----
+        A stdout log file basename for a compute job with an ID of `4088513` and a name of `python` would look like this: `python.o4088513`
+        The corresponding stderr log name would look like: `python.e4088513`
         """
         if not self.log_dir:
             logger.warning('log_dir attribute is not set for this qsub job: {0}'.format((self.id, self.name)))
@@ -127,7 +158,11 @@ class Job(object):
 
     def get_job(self, id, qstat_stdout = None):
         """
-        Retrieve the job's qstat entry
+        Retrieves the job's `qstat` entry
+
+        Returns
+        -------
+        str
         """
         import re
         try:
@@ -142,7 +177,11 @@ class Job(object):
 
     def get_status(self, id, entry = None, qstat_stdout = None):
         """
-        Get the status of the qsub job
+        Gets the status of the qsub job, e.g. "Eqw", "r", etc.
+
+        Returns
+        -------
+        str
         """
         import re
         # regex for the pattern matching https://docs.python.org/2/library/re.html
@@ -157,7 +196,11 @@ class Job(object):
 
     def get_state(self, status, job_state_key):
         """
-        Get the interpretation of the job's status
+        Gets the interpretation of the job's status from the `job_state_key`, e.g. "Running", etc.
+
+        Returns
+        -------
+        str
         """
         # defaultdict returns None if the key is not present
         state = job_state_key[str(status)]
@@ -165,7 +208,11 @@ class Job(object):
 
     def get_is_running(self, state, job_state_key):
         """
-        Check if the job is considered to be running
+        Checks if the job is considered to be running
+
+        Returns
+        -------
+        bool
         """
         is_running = False
         if state in ['Running']:
@@ -174,7 +221,11 @@ class Job(object):
 
     def get_is_error(self, state, job_state_key):
         """
-        Check if the job is considered to in an error state
+        Checks if the job is considered to in an error state
+
+        Returns
+        -------
+        bool
         """
         is_running = False
         if state in ['Error']:
@@ -183,7 +234,11 @@ class Job(object):
 
     def get_is_present(self, id, entry = None, qstat_stdout = None):
         """
-        Find out if a job is present in qsub
+        Finds out if a job is present in qsub
+
+        Returns
+        -------
+        bool
         """
         if not entry:
             entry = self.get_job(id = id, qstat_stdout = qstat_stdout)
@@ -194,7 +249,7 @@ class Job(object):
 
     def _update(self):
         """
-        Update the object's status attributes
+        Update the object's status attributes based on `qstat` stdout messages
         """
         self.qstat_stdout = qstat()
         self.entry = self.get_job(id = self.id, qstat_stdout = self.qstat_stdout)
@@ -206,7 +261,7 @@ class Job(object):
 
     def _debug_update(self, qstat_stdout):
         """
-        Debug update mode with requires a qstat_stdout to be passed
+        Debug update mode with requires a qstat_stdout to be passed manually after object initialization
         """
         self.qstat_stdout = qstat_stdout
         self.entry = self.get_job(id = self.id, qstat_stdout = self.qstat_stdout)
@@ -217,21 +272,36 @@ class Job(object):
 
     def running(self):
         """
-        Return the most recent running state of the job
+        Returns `True` or `False` whether or not the job is currently considered to be running
+
+        Returns
+        -------
+        bool
+            `True` if running, otherwise `False`
         """
         self._update()
         return(self.is_running)
 
     def error(self):
         """
-        Return the most recent error state of the job
+        Returns `True` or `False`  whether or not the job is currently considered to be in an error state
+
+        Returns
+        -------
+        bool
+            `True` if in error, otherwise `False`
         """
         self._update()
         return(self.is_error)
 
     def present(self):
         """
-        Return the most recent presence or absence of the job
+        Returns `True` or `False`  whether or not the job is currently in the `qstat` queue
+
+        Returns
+        -------
+        bool
+            `True` if present, otherwise `False`
         """
         self._update()
         return(self.is_present)
@@ -239,8 +309,16 @@ class Job(object):
     # ~~~~~ Methods for querying qacct for job completion status ~~~~~ #
     def get_qacct(self, job_id = None):
         """
-        get the qacct entry for a completed qsub job
-        WARNING: This is extremely slow!! 10 - 30+ seconds
+        Gets the `qacct` entry for a completed qsub job, used to determine if the job completed successfully
+
+        Notes
+        -----
+        This operation is extremely slow, takes about 10 - 30+ seconds to complete
+
+        Returns
+        -------
+        str
+            The character string representation of the stdout from the `qacct -j` command for the job
         """
         if not job_id:
             job_id = self.id
@@ -250,10 +328,21 @@ class Job(object):
 
     def qacct2dict(self, proc_stdout = None, entry_delim = None):
         """
-        convert text output from qacct into a dictionary for parsing
-        qacct returns multiple entries per job_id, because the job_id
-        numbers wrap around so multiple historic jobs have had the same number
-        each job entry for a given number is separated by a large delimiter string
+        Converts text output from `qacct` into a dictionary for parsing
+
+        Notes
+        -----
+        `qacct` returns multiple entries per `job_id`, because the `job_id` wrap around. So multiple historic jobs with the same `job_id` number will also be returned, delimited by a long string of `===`
+
+        Parameters
+        ----------
+        entry_delim: str
+            character string delimiter to split entries in the `qacct` output, defaults to '=============================================================='
+
+        Returns
+        -------
+        dict
+            a dictionary of individual records containing metadata about the completion status of jobs with the matching `job_id`
         """
         if not proc_stdout:
             proc_stdout = self.get_qacct()
@@ -278,20 +367,30 @@ class Job(object):
 
     def filter_qacct(self, qacct_dict = None, days_limit = 7, username = None):
         """
-        filter out 'bad' entries from the dict
-        since the qacct_dict contains historic entries with the same job_id,
-        we need to filter them out
-        each job entry should have a username associated, try to match this against
-        the current user's username
-        if the job entry does not match, get rid of it
-        also come up with other criteria for filtering out unwanted job entries here...
+        Filters out 'bad' entries from the `qacct` output dictionary
 
-        - also make sure the job completed recently, 7 days should be plenty of time to wait for a job to finish
+        Notes
+        -----
+        Filtering is required to remove historic job records from the `qacct` output; only one record can remain in order for the job's completeion status to be determined. This function will try to identify entries which are extraneous and do not represent the intended compute job. The default filtering criteria will first try filter out records that contain usernames which do not match that of the current user. Next, records with a timestamp older than the provided `days_limit` will also be filtered out, in case the current user has multiple job entries for the given `job_id`. Note that the timestamp format used in the `qacct` output is inconsistent, so this type of filtering may be prone to errors.
 
-        TODO: come up with other criteria for filtering out unwanted job entries here...
+        Parameters
+        ----------
+        qacct_dict: dict
+            dictionary containing job records which represent `qacct` entries
+        days_limit: int or None
+            Maximum allowed age of a job. Defaults to 7 days, change this to `None` to disable date filtering
+        username: str
+            The username which `qacct` records must match, defaults to the current user's name
 
-        ultimately, we need to make sure that only one entry exists in this dict
-        corresponding to the correct entry for this job
+        Todo
+        ----
+        Come up with other criteria for filtering out unwanted job entries here...
+
+
+        Returns
+        -------
+        dict
+            a dictionary which will hopefully contain only one `qacct` record, hopefully matching the intended compute job
         """
         if not username:
             username = getpass.getuser()
