@@ -34,9 +34,13 @@ format `key: value`, where `key` is the character string representation of the j
 Recognized Job States
 ---------------------
 `Eqw`: `Error`; the job is in an error status and never started running
+
 `r`: `Running`; the job is currently running
+
 `qw`: `Waiting`; the job is currently in the scheduler queue waiting to run
+
 `t`: `None`; ???
+
 `dr`: `None`; the job has been submitted for deletion and will be deleted
 """
 job_state_key['Eqw'] = 'Error'
@@ -51,9 +55,15 @@ class Job(object):
     """
     Main object class for tracking and validating a compute job that has been submitted to the HPC cluster with the `qsub` command
 
-    x = qsub.Job('2379768')
-    x.running()
-    x.present()
+
+
+    Examples
+    ----------
+    Example usage::
+
+        x = qsub.Job('2379768')
+        x.running()
+        x.present()
     """
     def __init__(self, id, name = None, log_dir = None, debug = False):
         """
@@ -87,7 +97,7 @@ class Job(object):
     # ~~~~~ Methods for determining running job state from qstat ~~~~~ #
     def _completions(self):
         """
-        Make the default 'completions' string
+        Make a default 'completions' string attribute
         """
         return('{0}\nlog_paths = {1}\n'.format(self.__repr__(), self.log_paths))
 
