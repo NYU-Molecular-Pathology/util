@@ -421,11 +421,20 @@ class Job(object):
     def get_qacct_job_failed_status(self, failed_entry):
         """
         Special parsing for the 'failed' entry in qacct output
-        because its not a plain digit value its got some weird text description stuck in there too sometimes
+        because its not a plain digit value its got some weird text description stuck in there too
 
-        {'failed': '100 : assumedly after job'}
+        Examples
+        --------
+        Example of weird 'failed' entry that needs to be parsed::
 
-        return the first int after splitting on the first whitespace
+            {'failed': '100 : assumedly after job'}
+
+        In this case, the value 100 would be returned
+
+        Returns
+        -------
+        int
+            the first int value found after splitting text on the first whitespace found
         """
         # get the first entry in the line split by whitespace
         value = failed_entry.split(None, 1)[0]
@@ -434,8 +443,7 @@ class Job(object):
 
     def update_completion_validations(self, validation_dict):
         """
-        Update a dict of validation stats
-        and its text string representation
+        Updates the `completion_validations` dict of validation stats with a pretty printed view of the `validations` dictionary, along with the Job's text string representation
         """
 
         self.completion_validations.update(validation_dict)
@@ -446,7 +454,12 @@ class Job(object):
 
     def validate_completion(self, job_id = None, *args, **kwargs):
         """
-        Check if the qsub job completed successfully
+        Checks if the qsub job completed successfully. Multiple validation criteria are evaluated one at a time, and the results of each are added to a `completion_validations` dictionary attribute along with a verbose description of the criteria. After all the criteria have been evaluated, returns a boolean `True` or `False` to determine if all criteria passed validation. This determines if a compute job is considered to have completed successfully or not.
+
+        Returns
+        -------
+        bool
+            `True` or `False`, whether or not all job completion validation criteria passed
         """
         if not job_id:
             job_id = self.id
@@ -582,11 +595,28 @@ class Job(object):
 # ~~~~~~ JOB FUNCTIONS ~~~~~ #
 def submit(verbose = False, log_dir = None, monitor = False, validate = False, *args, **kwargs):
     """
-    Main function for submitting a qsub job
-    passes args to 'submit_job'
-    returns a Jobs object for the job
+    Submits a shell command to be run as a `qsub` compute job. Returns a `Job` object. Passes args and kwargs to `submit_job`. Compute jobs are created by assembling a `qsub` shell command using a bash heredoc wrapped around the provided shell command to be executed.
 
-    job = submit(command = '', ...)
+    Parameters
+    ----------
+    verbose: bool
+        `True` or `False`, whether or not the generated `qsub` command should be printed in log output
+    log_dir: str
+        the directory to use for qsub job log output files, defaults to the current working directory
+    monitor: bool
+        whether the job should be immediately monitored until completion
+    validate: bool
+        whether or not the job should immediately be validated upon completion
+    *args: list
+        list of arguments to pass on to `submit_job`
+    **kwargs: dict
+        dictionary of args to pass on to `submit_job`
+
+    Examples
+    --------
+    Example usage::
+
+        job = submit(command = 'echo foo')
     """
     # check if log_dir was passed
     if log_dir:
