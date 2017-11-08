@@ -3,7 +3,7 @@
 """
 A collection of functions and objects for submitting jobs to the NYUMC SGE compute cluster with `qsub` from within Python, and monitoring them until completion
 
-This submodule can also be run as a stand-along demo script
+This submodule can also be run as a stand-alone demo script
 """
 import logging
 logger = logging.getLogger("qsub")
@@ -59,7 +59,7 @@ class Job(object):
     -----
     The default action upon initialization is to query `qstat` to determine whether the job is currently running. After a job has completed, built-in methods can be used to query `qacct -j` to determine if the job finished with a successful exit status. Both `qstat` and `qacct` are queried by making system calls to the the corresponding programs and parsing their stdout messages.
 
-    Many of the methods included with this object class have stand-alone functions of the same name, with the same usage & functionality. 
+    Many of the methods included with this object class have stand-alone functions of the same name, with the same usage & functionality.
 
     Examples
     ----------
@@ -74,7 +74,7 @@ class Job(object):
         Parameters
         ----------
         id: int
-            the numeric job ID returned by `qsub` at job submission
+            numeric job ID, as returned by `qsub` at job submission
         name: str
             the name given to the compute job
         log_dir: str
