@@ -59,6 +59,8 @@ class Job(object):
     -----
     The default action upon initialization is to query `qstat` to determine whether the job is currently running. After a job has completed, built-in methods can be used to query `qacct -j` to determine if the job finished with a successful exit status. Both `qstat` and `qacct` are queried by making system calls to the the corresponding programs and parsing their stdout messages.
 
+    Many of the methods included with this object class have stand-alone functions of the same name, with the same usage & functionality. 
+
     Examples
     ----------
     Example usage::
@@ -330,10 +332,6 @@ class Job(object):
         """
         Converts text output from `qacct` into a dictionary for parsing
 
-        Notes
-        -----
-        `qacct` returns multiple entries per `job_id`, because the `job_id` wrap around. So multiple historic jobs with the same `job_id` number will also be returned, delimited by a long string of `===`
-
         Parameters
         ----------
         entry_delim: str
@@ -343,6 +341,11 @@ class Job(object):
         -------
         dict
             a dictionary of individual records containing metadata about the completion status of jobs with the matching `job_id`
+
+        Notes
+        -----
+        `qacct` returns multiple entries per `job_id`, because the `job_id` wrap around. So multiple historic jobs with the same `job_id` number will also be returned, delimited by a long string of `===`
+
         """
         if not proc_stdout:
             proc_stdout = self.get_qacct()
@@ -369,10 +372,6 @@ class Job(object):
         """
         Filters out 'bad' entries from the `qacct` output dictionary
 
-        Notes
-        -----
-        Filtering is required to remove historic job records from the `qacct` output; only one record can remain in order for the job's completeion status to be determined. This function will try to identify entries which are extraneous and do not represent the intended compute job. The default filtering criteria will first try filter out records that contain usernames which do not match that of the current user. Next, records with a timestamp older than the provided `days_limit` will also be filtered out, in case the current user has multiple job entries for the given `job_id`. Note that the timestamp format used in the `qacct` output is inconsistent, so this type of filtering may be prone to errors.
-
         Parameters
         ----------
         qacct_dict: dict
@@ -382,15 +381,19 @@ class Job(object):
         username: str
             The username which `qacct` records must match, defaults to the current user's name
 
-        Todo
-        ----
-        Come up with other criteria for filtering out unwanted job entries here...
-
-
         Returns
         -------
         dict
             a dictionary which will hopefully contain only one `qacct` record, hopefully matching the intended compute job
+
+        Notes
+        -----
+        Filtering is required to remove historic job records from the `qacct` output; only one record can remain in order for the job's completeion status to be determined. This function will try to identify entries which are extraneous and do not represent the intended compute job. The default filtering criteria will first try filter out records that contain usernames which do not match that of the current user. Next, records with a timestamp older than the provided `days_limit` will also be filtered out, in case the current user has multiple job entries for the given `job_id`. Note that the timestamp format used in the `qacct` output is inconsistent, so this type of filtering may be prone to errors.
+
+        Todo
+        ----
+        Come up with other criteria for filtering out unwanted job entries here...
+
         """
         if not username:
             username = getpass.getuser()
@@ -423,6 +426,11 @@ class Job(object):
         Special parsing for the 'failed' entry in qacct output
         because its not a plain digit value its got some weird text description stuck in there too
 
+        Returns
+        -------
+        int
+            the first int value found after splitting text on the first whitespace found
+
         Examples
         --------
         Example of weird 'failed' entry that needs to be parsed::
@@ -431,10 +439,6 @@ class Job(object):
 
         In this case, the value 100 would be returned
 
-        Returns
-        -------
-        int
-            the first int value found after splitting text on the first whitespace found
         """
         # get the first entry in the line split by whitespace
         value = failed_entry.split(None, 1)[0]
@@ -612,6 +616,11 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
     **kwargs: dict
         dictionary of args to pass on to `submit_job`
 
+    Returns
+    -------
+    Job
+        a `Job` object, representing a `qsub` compute job that has been submitted to the HPC cluster
+
     Examples
     --------
     Example usage::
@@ -619,10 +628,6 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
         job = submit(command = 'echo foo')
         job = submit(command = 'echo foo', log_dir = "logs", print_verbose = True, monitor = True, validate = True)
 
-    Returns
-    -------
-    Job
-        a `Job` object, representing a `qsub` compute job that has been submitted to the HPC cluster
     """
     # check if log_dir was passed
     if log_dir:
@@ -686,7 +691,7 @@ def get_job_ID_name(proc_stdout):
         proc_stdout = submit_job(return_stdout = True) # 'Your job 1245023 ("python") has been submitted'
         job_id, job_name = get_job_ID_name(proc_stdout)
 
-        """
+    """
     proc_stdout_list = proc_stdout.split()
     job_id = proc_stdout_list[2]
     job_name = proc_stdout_list[3]
@@ -700,28 +705,6 @@ def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_lo
     Internal function for submitting compute jobs to the HPC cluster running SGE by using the `qsub` shell command. Call this function with `submit` instead; args and kwargs will be evaluated here. Creates a `qsub` shell command to be run in a subprocess, submitting the cluster job with a bash heredoc wrapper.
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
-
-    Notes
-    -----
-    `stdout_log_dir` and `stderr_log_dir` should have trailing slashes in their paths, and are set to the same path by default using the `log_dir` arg in `submit`
-
-    Malformed or nonexistant `stdout_log_dir` and `stderr_log_dir` paths are a common source for compute job failure.
-
-    Call this function with `submit` instead.
-
-    This function generates a `qsub` shell command in a format such as this::
-
-        qsub -j y -N "python" -o :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" -e :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" <<E0F
-        set -x
-
-            cat /etc/hosts
-            sleep 10
-
-        set +x
-        E0F
-
-    The generated shell command will be evaluated by Python `subprocess`, and its stdout messages returned.
-
 
     Parameters
     ----------
@@ -752,6 +735,27 @@ def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_lo
     -------
     str
         returns the stdout of the evaluated `qsub` shell command, assuming `return_stdout = True` was passed. Otherwise, returns nothing.
+
+    Notes
+    -----
+    `stdout_log_dir` and `stderr_log_dir` should have trailing slashes in their paths, and are set to the same path by default using the `log_dir` arg in `submit`
+
+    Malformed or nonexistant `stdout_log_dir` and `stderr_log_dir` paths are a common source for compute job failure.
+
+    Call this function with `submit` instead.
+
+    This function generates a `qsub` shell command in a format such as this::
+
+        qsub -j y -N "python" -o :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" -e :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" <<E0F
+        set -x
+
+            cat /etc/hosts
+            sleep 10
+
+        set +x
+        E0F
+
+    The generated shell command will be evaluated by Python `subprocess`, and its stdout messages returned.
 
     """
     if not stdout_log_dir:
@@ -796,6 +800,20 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
 
     This function allows your program to wait for jobs to finish running before continuing.
 
+    Parameters
+    ----------
+    jobs: list
+        a list of `Job` objects
+    kill_err: bool
+        `True` or `False`, whether or not jobs left in error state should be automatically killed. Its recommened to leave this `True`
+    print_verbose: bool
+        whether or not descriptions of the steps being taken should be printed to the console with Python's `print` function
+
+    Returns
+    -------
+    tuple
+        a tuple of lists containing `Job` objects, in the format: `(completed_jobs, err_jobs)`
+
     Notes
     -----
     This function will only check whether a job is present/absent in the `qstat` queue, or in an error state in the `qstat` queue; it does not actually check if a job is in a 'Running' state.
@@ -812,19 +830,6 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
         completed_jobs, err_jobs = monitor_jobs([job], print_verbose = True)
         [job.validate_completion() for job in completed_jobs]
 
-    Parameters
-    ----------
-    jobs: list
-        a list of `Job` objects
-    kill_err: bool
-        `True` or `False`, whether or not jobs left in error state should be automatically killed. Its recommened to leave this `True`
-    print_verbose: bool
-        whether or not descriptions of the steps being taken should be printed to the console with Python's `print` function
-
-    Returns
-    -------
-    tuple
-        a tuple of lists containing `Job` objects, in the format: `(completed_jobs, err_jobs)`
     """
     # make sure jobs were passed
     if not jobs or len(jobs) < 1:
@@ -876,12 +881,16 @@ def find_all_job_id_names(text):
     """
     Searchs a multi-line character string for all `qsub` job submission messages, where `text` represents the stdout from a series of shell commands where are assumed to have submitted a number of `qsub` jobs (e.g. by an external program)
 
+    Parameters
+    ----------
+    text: str
+        a single character string, e.g. representing line(s) of text assumed to be stdout from a shell command that submitted `qsub` jobs
+
     Notes
     -----
     This function works by parsing the provided text for lines that look like this::
 
         Your job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted
-
 
     Examples
     --------
@@ -891,10 +900,6 @@ def find_all_job_id_names(text):
         >>> [(job_id, job_name) for job_id, job_name in find_all_job_id_names(text)]
         [('3947957', 'sns.wes.SeraCare-1to1-Positive')]
 
-    Parameters
-    ----------
-    text: str
-        a single character string, e.g. representing line(s) of text assumed to be stdout from a shell command that submitted `qsub` jobs
     """
     # split the lines
     text_lines = text.split('\n')
