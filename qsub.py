@@ -595,7 +595,7 @@ class Job(object):
 # ~~~~~~ JOB FUNCTIONS ~~~~~ #
 def submit(verbose = False, log_dir = None, monitor = False, validate = False, *args, **kwargs):
     """
-    Submits a shell command to be run as a `qsub` compute job. Returns a `Job` object. Passes args and kwargs to `submit_job`. Compute jobs are created by assembling a `qsub` shell command using a bash heredoc wrapped around the provided shell command to be executed.
+    Submits a shell command to be run as a `qsub` compute job. Returns a `Job` object. Passes args and kwargs to `submit_job`. Compute jobs are created by assembling a `qsub` shell command using a bash heredoc wrapped around the provided shell command to be executed. The numeric job ID and job name echoed by `qsub` on stdout will be captured and used to generate a 'Job' object.
 
     Parameters
     ----------
@@ -617,6 +617,12 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
     Example usage::
 
         job = submit(command = 'echo foo')
+        job = submit(command = 'echo foo', log_dir = "logs", print_verbose = True, monitor = True, validate = True)
+
+    Returns
+    -------
+    Job
+        a `Job` object, representing a `qsub` compute job that has been submitted to the HPC cluster
     """
     # check if log_dir was passed
     if log_dir:
@@ -649,9 +655,14 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
 
 
 def subprocess_cmd(command, return_stdout = False):
-    # run a terminal command with stdout piping enabled
+    '''
+    Runs a terminal command with stdout piping enabled
+
+    Notes
+    -----
+    `universal_newlines=True` required for Python 2 3 compatibility with stdout parsing
+    '''
     process = sp.Popen(command,stdout=sp.PIPE, shell=True, universal_newlines=True)
-     # universal_newlines=True required for Python 2 3 compatibility with stdout parsing
     proc_stdout = process.communicate()[0].strip()
     if return_stdout == True:
         return(proc_stdout)
@@ -661,10 +672,18 @@ def subprocess_cmd(command, return_stdout = False):
 
 def get_job_ID_name(proc_stdout):
     """
-    return a tuple of the form (<id number>, <job name>)
-    usage:
-    proc_stdout = submit_job(return_stdout = True) # 'Your job 1245023 ("python") has been submitted'
-    job_id, job_name = get_job_ID_name(proc_stdout)
+    Parses stdout text to find lines that match the output message from a `qsub` job submission
+
+    Returns
+    -------
+    tuple
+        `(<job id number>, <job name>)`
+
+    Examples
+    --------
+    Example usage::
+        proc_stdout = submit_job(return_stdout = True) # 'Your job 1245023 ("python") has been submitted'
+        job_id, job_name = get_job_ID_name(proc_stdout)
     """
     proc_stdout_list = proc_stdout.split()
     job_id = proc_stdout_list[2]
@@ -676,10 +695,62 @@ def get_job_ID_name(proc_stdout):
 
 def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = None, stderr_log_dir = None, return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False, **kwargs):
     """
+    Internal function for submitting compute jobs to the HPC cluster running SGE by using the `qsub` shell command. Call this function with `submit` instead; args and kwargs will be evaluated here. Creates a `qsub` shell command to be run in a subprocess, submitting the cluster job with a bash heredoc wrapper.
     Basic format for job submission to the SGE cluster with qsub
     using a bash heredoc format
 
-    NOTE: stdout_log_dir and stderr_log_dir paths MUST have a trailing slash!!
+    Notes
+    -----
+    `stdout_log_dir` and `stderr_log_dir` should have trailing slashes in their paths, and are set to the same path by default using the `log_dir` arg in `submit`
+
+    Malformed or nonexistant `stdout_log_dir` and `stderr_log_dir` paths are a common source for compute job failure.
+
+    Call this function with `submit` instead.
+
+    This function generates a `qsub` shell command in a format such as this::
+
+        qsub -j y -N "python" -o :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" -e :"/ifs/data/molecpathlab/scripts/snsxt/snsxt/util/" <<E0F
+        set -x
+
+            cat /etc/hosts
+            sleep 10
+
+        set +x
+        E0F
+
+    The generated shell command will be evaluated by Python `subprocess`, and its stdout messages returned.
+
+
+    Parameters
+    ----------
+    command: str
+        shell commands to be run inside the compute job
+    params: str
+        extra params to be passed to `qsub`
+    name: str
+        the name of the qsub compute job
+    stdout_log_dir: str
+        the path to the directory to use for `qsub` log output; if `None`, defaults to the current working directory
+    stderr_log_dir: str
+        the path to the directory to use for `qsub` log output; if `None`, defaults to the current working directory
+    return_stdout: bool
+        whether or not the function should `return` the stdout of the `qsub` submission subprocess call, its recommened to always leave this set to `True`, otherwise stdout will be printed to program the log output
+    verbose: bool
+        whether or not the generated `qsub` command should be printed in program log output
+    pre_commands: str
+        commands to run before the `command` inside the qsub job; defaults to 'set -x' in order to provide verbose qsub log output, you can also put environment modulation code here.
+    post_commands: str
+        commands to run after the `command` inside the qsub job; defaults to 'set +x'
+    sleeps: int
+        number of seconds to `sleep` after submitting a `qsub` job; it is recommened to leave this set to a value >0 in order to avoid overwhelming the job scheduler with requests
+    print_verbose: bool
+        print the generated `qsub` command to the console with the Python `print` function (as opposed to logger output)
+
+    Returns
+    -------
+    str
+        returns the stdout of the evaluated `qsub` shell command, assuming `return_stdout = True` was passed. Otherwise, returns nothing.
+
     """
     if not stdout_log_dir:
         stdout_log_dir = os.path.join(os.getcwd(), '')
@@ -719,21 +790,39 @@ post_commands # 6
 
 def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
     """
-    Monitor a list of qsub Job objects for completion
-    make sure that all jobs are present in the qstat output
-    if a job is absent or is in error state, remove it from the list of jobs
-    wait until the list of jobs reaches 0
+    Monitors a list of qsub `Job` objects for completion. Job monitoring is accomplished by calling each job's `present()` and `error()` methods, then waiting for several seconds. Jobs that are no longer present in `qstat` or have an error state will be removed from the monitoring queue. The function will repeatedly check each job and then wait, removing absent or errored jobs, until no jobs remain in the monitoring queue. Optionally, jobs that had an error status will be killed with the `qdel` command, or else they will remain in `qstat` indefinitely.
 
-    this function does not actually check to make sure the jobs are 'running', only that they are present/absent
-    and that they aren't in error state
+    This function allows your program to wait for jobs to finish running before continuing.
 
-    if a job is present and not in error state, it is assumed to either be 'qw' waiting to run,
-    or 'r' running, in both cases it will eventually finish and leave the queue
+    Notes
+    -----
+    This function will only check whether a job is present/absent in the `qstat` queue, or in an error state in the `qstat` queue; it does not actually check if a job is in a 'Running' state.
 
-    jobs in 'Eqw' error state are stuck and will not leave on their own so must be removed and killed ourselves
+    If a job is present and not in error state, it is assumed to either be 'qw' (waiting to run), or 'r' (running). In both cases, it is assumed that the job will eventually finish and leave the `qstat` queue, and subsequently be removed from this function's monitoring queue.
 
-    jobs is a list of qsub Job objects
-    kill_err = kill Jobs left in error state
+    Jobs in 'Eqw' error state are stuck and will not leave on their own so must be removed automatically by this function, or killed manually by the end user.
+
+    Examples
+    --------
+    Example usage::
+
+        job = submit(print_verbose = True)
+        completed_jobs, err_jobs = monitor_jobs([job], print_verbose = True)
+        [job.validate_completion() for job in completed_jobs]
+
+    Parameters
+    ----------
+    jobs: list
+        a list of `Job` objects
+    kill_err: bool
+        `True` or `False`, whether or not jobs left in error state should be automatically killed. Its recommened to leave this `True`
+    print_verbose: bool
+        whether or not descriptions of the steps being taken should be printed to the console with Python's `print` function
+
+    Returns
+    -------
+    tuple
+        a tuple of lists containing `Job` objects, in the format: `(completed_jobs, err_jobs)`
     """
     # make sure jobs were passed
     if not jobs or len(jobs) < 1:
@@ -783,14 +872,29 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
 
 def find_all_job_id_names(text):
     """
-    Search a multi-line character string for all qsub job messages
-    text is a single text that contains multiple line
+    Searchs a multi-line character string for all `qsub` job submission messages, where `text` represents the stdout from a series of shell commands where are assumed to have submitted a number of `qsub` jobs (e.g. by an external program)
 
-    example:
-    text = '\n\n process sample SeraCare-1to1-Positive\n\n CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.SeraCare-1to1-Positive -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test SeraCare-1to1-Positive\nYour job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted\n\n'
+    Notes
+    -----
+    This function works by parsing the provided text for lines that look like this::
 
-    [(job_id, job_name) for job_id, job_name in find_all_job_id_names(text)]
-    >> [('3947957', 'sns.wes.SeraCare-1to1-Positive')]
+        Your job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted
+
+
+    Examples
+    --------
+    Example usage::
+
+        >>> text = '\n\n process sample SeraCare-1to1-Positive\n\n CMD: qsub -q all.q -cwd -b y -j y -N sns.wes.SeraCare-1to1-Positive -M kellys04@nyumc.org -m a -hard -l mem_free=64G -pe threaded 8-16 bash /ifs/data/molecpathlab/scripts/snsxt/sns_output/test/sns/routes/wes.sh /ifs/data/molecpathlab/scripts/snsxt/sns_output/test SeraCare-1to1-Positive\nYour job 3947957 ("sns.wes.SeraCare-1to1-Positive") has been submitted\n\n'
+
+        >>> [(job_id, job_name) for job_id, job_name in find_all_job_id_names(text)]
+
+        [('3947957', 'sns.wes.SeraCare-1to1-Positive')]
+
+    Parameters
+    ----------
+    text: str
+        a single character string, e.g. representing line(s) of text assumed to be stdout from a shell command that submitted `qsub` jobs
     """
     # split the lines
     text_lines = text.split('\n')
@@ -808,7 +912,7 @@ def find_all_job_id_names(text):
 # ~~~~~~ COMPLETED JOB VALIDATION ~~~~~ #
 def get_qacct(job_id):
     """
-    get the qacct entry for a completed qsub job
+    Gets the qacct entry for a completed qsub job
     """
     qacct_command = 'qacct -j {0}'.format(job_id)
     run_cmd = t.SubprocessCmd(command = qacct_command).run()
@@ -816,7 +920,7 @@ def get_qacct(job_id):
 
 def qacct2dict(proc_stdout):
     """
-    convert text output from qacct into a dictionary for parsing
+    Converts text output from qacct into a dictionary for parsing
     """
     entry_dict = {}
     entry_delim = '=============================================================='
@@ -833,7 +937,7 @@ def qacct2dict(proc_stdout):
 
 def filter_qacct(qacct_dict, days_limit = 7):
     """
-    filter out 'bad' entries from the dict
+    Filters out 'bad' entries from the dict
     """
     username = getpass.getuser()
     if qacct_dict:
@@ -859,7 +963,11 @@ def get_qacct_job_failed_status(failed_entry):
     Special parsing for the 'failed' entry in qacct output
     because its not a plain digit value its got some weird text description stuck in there too sometimes
 
-    {'failed': '100 : assumedly after job'}
+    Examples
+    --------
+    Example text that needs parsing::
+
+        {'failed': '100 : assumedly after job'}
     """
     # get the first entry in the line split by whitespace
     value = failed_entry.split(None, 1)[0]
@@ -868,7 +976,7 @@ def get_qacct_job_failed_status(failed_entry):
 
 def validate_job_completion(job_id):
     """
-    Check if a qsub job completed successfully
+    Checks if a qsub job completed successfully
     """
     # get the results of the qacct query command
     proc_stdout = get_qacct(job_id = job_id)
@@ -916,11 +1024,15 @@ def demo_qsub():
     """
     Demo the qsub code functions
 
-    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
+    Examples
+    --------
+    Example usages::
 
-    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True); job.validate_completion()
+        import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True); qsub.monitor_jobs([job], print_verbose = True); job.validate_completion(); print(job.completions)
 
-    import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True, validate = True)
+        import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True); job.validate_completion()
+
+        import qsub; job = qsub.submit(log_dir = "logs", print_verbose = True, monitor = True, validate = True)
     """
     print('running single-job demo')
 
@@ -948,7 +1060,7 @@ def demo_qsub():
 
 def demo_multi_qsub(job_num = 3):
     """
-    Demo the qsub code functions
+    Demo of the qsub code functions. Submits multiple jobs and monitors them to completion.
     """
     job_num = int(job_num)
 
@@ -988,9 +1100,3 @@ def demo_multi_qsub(job_num = 3):
 if __name__ == "__main__":
     demo_qsub()
     demo_multi_qsub()
-    # 3956736_normal
-    # 3949361_killed
-    # 3951026_died
-    # validate_job_completion('3956736')
-    # validate_job_completion('3949361')
-    # validate_job_completion('3951026')
