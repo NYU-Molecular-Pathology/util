@@ -103,7 +103,8 @@ class Job(object):
         self.name = name
         self.log_dir = log_dir
         self.log_paths = {}
-        self.update_log_files()
+        if log_dir:
+            self.update_log_files()
         # hold a character string of completion validation information
         self.completions = self._completions()
 
