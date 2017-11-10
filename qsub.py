@@ -823,6 +823,23 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
 
     Jobs in 'Eqw' error state are stuck and will not leave on their own so must be removed automatically by this function, or killed manually by the end user.
 
+    The ``jobs`` is mutable and passed by reference; this means that upon completion of this function, the original ``jobs`` list will be depleted::
+
+        >>> import qsub
+        >>> jobs = []
+        >>> len(jobs)
+        0
+        >>> for i in range(5):
+        ...     job = qsub.submit('sleep 20')
+        ...     jobs.append(job)
+        ...
+        >>> len(jobs)
+        5
+        >>> qsub.monitor_jobs(jobs = jobs)
+        ([Job(id = 4098911, name = python, log_dir = None), Job(id = 4098913, name = python, log_dir = None), Job(id = 4098915, name = python, log_dir = None), Job(id = 4098912, name = python, log_dir = None), Job(id = 4098914, name = python, log_dir = None)], [])
+        >>> len(jobs)
+        0
+
     Examples
     --------
     Example usage::
