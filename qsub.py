@@ -906,11 +906,14 @@ def kill_jobs(jobs):
     jobs: list
         a list of ``Job`` objects
     """
-    logger.debug('Killing jobs: {0}'.format(jobs))
-    qdel_command = 'qdel {0}'.format(' '.join([job.id for job in jobs]))
-    cmd = tools.SubprocessCmd(command = qdel_command).run()
-    logger.debug(cmd.proc_stdout)
-    logger.debug(cmd.proc_stderr)
+    if jobs:
+        logger.debug('Killing jobs: {0}'.format(jobs))
+        qdel_command = 'qdel {0}'.format(' '.join([job.id for job in jobs]))
+        cmd = tools.SubprocessCmd(command = qdel_command).run()
+        logger.debug(cmd.proc_stdout)
+        logger.debug(cmd.proc_stderr)
+    else:
+        logger.debug("No jobs passed")
 
 def kill_job_ids(job_ids):
     """
@@ -930,11 +933,14 @@ def kill_job_ids(job_ids):
         qsub.kill_job_ids(job_ids = job_ids)
 
     """
-    logger.debug('Killing jobs: {0}'.format(job_ids))
-    qdel_command = 'qdel {0}'.format(' '.join([job_id for job_id in job_ids]))
-    cmd = tools.SubprocessCmd(command = qdel_command).run()
-    logger.debug(cmd.proc_stdout)
-    logger.debug(cmd.proc_stderr)
+    if job_ids:
+        logger.debug('Killing jobs: {0}'.format(job_ids))
+        qdel_command = 'qdel {0}'.format(' '.join([job_id for job_id in job_ids]))
+        cmd = tools.SubprocessCmd(command = qdel_command).run()
+        logger.debug(cmd.proc_stdout)
+        logger.debug(cmd.proc_stderr)
+    else:
+        logger.debug("No jobs passed")
 
 def find_all_job_id_names(text):
     """
