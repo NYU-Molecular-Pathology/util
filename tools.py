@@ -28,7 +28,7 @@ class SubprocessCmd(object):
     """
     A command to be run in subprocess
 
-    run_cmd = SubprocessCmd(command = command).run()
+    run_cmd = SubprocessCmd(command = 'echo foo').run()
     """
     def __init__(self, command):
         self.command = command
