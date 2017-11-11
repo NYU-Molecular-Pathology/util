@@ -16,8 +16,13 @@ handlers:
     level: DEBUG
     formatter: console
     stream: ext://sys.stdout
+  # main:
+  #   () : __main__.logpath
+  #   level: DEBUG   
+  #   formatter: default
   main:
-    () : __main__.logpath
+    class: logging.FileHandler
+    filename: main.log
     level: DEBUG   
     formatter: default
 

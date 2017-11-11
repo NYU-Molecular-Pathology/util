@@ -7,6 +7,7 @@ Functions & items to set up the program loggers
 import yaml
 import logging
 import logging.config
+import datetime
 import os
 
 
@@ -15,7 +16,6 @@ def timestamp():
     """
     Return a timestamp string
     """
-    import datetime
     return('{:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now()))
 
 def logpath(logfile = 'log.txt'):
@@ -179,3 +179,58 @@ def log_exception(logger, errors):
     Create a log entry with the errors and traceback
     """
     logger.error(errors, exc_info=True)
+
+def has_console_handler(logger):
+    """
+    Searches a logger's handlers to determine if a ``console`` handler is present
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        a ``logging.Logger`` object
+    """
+    # make sure there are handlers
+    if len(logger.handlers) < 1:
+        return(False)
+    # check if one of the handlers is named 'console'
+    return(any([h.name == 'console' for h in logger.handlers]))
+
+def build_console_handler(name = "console", level = logging.DEBUG, log_format = '[%(asctime)s] %(levelname)s (%(name)s:%(funcName)s:%(lineno)d) %(message)s', datefmt = "%Y-%m-%d %H:%M:%S"):
+    """
+    Returns a basic "console" ``StreamHandler``
+    """
+
+    # create console handler
+    consolelog = logging.StreamHandler()
+    consolelog.setLevel(level)
+    consolelog.set_name(name)
+
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter(log_format)
+    formatter.datefmt = datefmt
+    consolelog.setFormatter(formatter)
+
+    return(consolelog)
+
+
+def add_missing_console_handler(logger, *args, **kwargs):
+    """
+    Adds a `console` ``StreamHandler`` if a handler named "console" is not present already in the logger
+
+    Examples
+    --------
+    Example usage::
+
+        >>> import log
+        >>> import logging
+        >>> import qsub
+        >>> log.has_console_handler(qsub.logger)
+        False
+        >>> log.add_missing_console_handler(qsub.logger)
+        >>> log.has_console_handler(qsub.logger)
+        True
+
+    """
+    if not has_console_handler(logger):
+        console_handler = build_console_handler(*args, **kwargs)
+        logger.addHandler(console_handler)

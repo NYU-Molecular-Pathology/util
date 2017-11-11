@@ -5,9 +5,11 @@ A collection of functions and objects for submitting jobs to the NYUMC SGE compu
 
 This submodule can also be run as a stand-alone demo script
 """
+import log
 import logging
 logger = logging.getLogger("qsub")
 logger.debug("loading qsub module")
+
 import os
 from collections import defaultdict
 import subprocess as sp
@@ -22,7 +24,7 @@ try:
     from sh import qstat
 except:
     logger.error("qstat could not be loaded")
-import tools as t
+import tools
 
 # ~~~~ GLOBALS ~~~~~~ #
 job_state_key = defaultdict(lambda: None)
@@ -154,7 +156,7 @@ class Job(object):
         type_char = type_key[_type]
         logfile = str(self.name) + type_char + str(self.id)
         log_path = os.path.join(str(self.log_dir), logfile)
-        if not t.item_exists(log_path):
+        if not tools.item_exists(log_path):
             logger.warning('Log file does not appear to exist: {0}'.format(log_path))
         return(log_path)
 
@@ -326,7 +328,7 @@ class Job(object):
         if not job_id:
             job_id = self.id
         qacct_command = 'qacct -j {0}'.format(job_id)
-        run_cmd = t.SubprocessCmd(command = qacct_command).run()
+        run_cmd = tools.SubprocessCmd(command = qacct_command).run()
         return(run_cmd.proc_stdout)
 
     def qacct2dict(self, proc_stdout = None, entry_delim = None):
@@ -633,9 +635,9 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
     # check if log_dir was passed
     if log_dir:
         # create the dir if it doesnt exist already
-        t.mkdirs(log_dir)
+        tools.mkdirs(log_dir)
         # only continue if the log_dir exists now
-        if not t.item_exists(item = log_dir, item_type = 'dir'):
+        if not tools.item_exists(item = log_dir, item_type = 'dir'):
             logger.warning('log_dir does not exist and will not be used for qsub job submission; {0}'.format(log_dir))
         else:
             # resolve the path to the full, expanded, absolute, real path - bad log_dir paths break job submissions easily
@@ -661,13 +663,14 @@ def submit(verbose = False, log_dir = None, monitor = False, validate = False, *
 
 
 def subprocess_cmd(command, return_stdout = False):
-    '''
+    """
     Runs a terminal command with stdout piping enabled
 
     Notes
     -----
     `universal_newlines=True` required for Python 2 3 compatibility with stdout parsing
-    '''
+
+    """
     process = sp.Popen(command,stdout=sp.PIPE, shell=True, universal_newlines=True)
     proc_stdout = process.communicate()[0].strip()
     if return_stdout == True:
@@ -889,11 +892,49 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
             logger.debug('Killing jobs left in error state')
             if print_verbose: print('Killing jobs left in error state')
             qdel_command = 'qdel {0}'.format(' '.join([job.id for job in err_jobs]))
-            cmd = t.SubprocessCmd(command = qdel_command).run()
+            cmd = tools.SubprocessCmd(command = qdel_command).run()
             logger.debug(cmd.proc_stdout)
             if print_verbose: print(cmd.proc_stdout)
     return((completed_jobs, err_jobs))
 
+def kill_jobs(jobs):
+    """
+    Kills qsub jobs by issuing the ``qdel`` command
+
+    Parameters
+    ----------
+    jobs: list
+        a list of ``Job`` objects
+    """
+    logger.debug('Killing jobs: {0}'.format(jobs))
+    qdel_command = 'qdel {0}'.format(' '.join([job.id for job in jobs]))
+    cmd = tools.SubprocessCmd(command = qdel_command).run()
+    logger.debug(cmd.proc_stdout)
+    logger.debug(cmd.proc_stderr)
+
+def kill_job_ids(job_ids):
+    """
+    Kills qsub jobs by issuing the ``qdel`` command
+
+    Parameters
+    ----------
+    job_ids: list
+        a list of job ID numbers
+
+    Examples
+    --------
+    Example usage::
+
+        import qsub
+        job_ids = ['4104004', '4104006', '4104009']
+        qsub.kill_job_ids(job_ids = job_ids)
+
+    """
+    logger.debug('Killing jobs: {0}'.format(job_ids))
+    qdel_command = 'qdel {0}'.format(' '.join([job_id for job_id in job_ids]))
+    cmd = tools.SubprocessCmd(command = qdel_command).run()
+    logger.debug(cmd.proc_stdout)
+    logger.debug(cmd.proc_stderr)
 
 def find_all_job_id_names(text):
     """
@@ -938,7 +979,7 @@ def get_qacct(job_id):
     Gets the qacct entry for a completed qsub job
     """
     qacct_command = 'qacct -j {0}'.format(job_id)
-    run_cmd = t.SubprocessCmd(command = qacct_command).run()
+    run_cmd = tools.SubprocessCmd(command = qacct_command).run()
     return(run_cmd.proc_stdout)
 
 def qacct2dict(proc_stdout):
