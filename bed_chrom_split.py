@@ -130,7 +130,9 @@ def split_bed_by_chrom(bed_file, chroms = None, chrom_filenames = None, **kwargs
     # write the split output files
     with open(bed_file) as f:
         for line in f:
-            parts = line.split()
+            # split the line on tabs
+            parts = line.split('\t')
+            # check if the first entry matches a chrom_filenames key
             if chrom_filenames.get(parts[0], None):
                 chrom = parts[0]
                 output_file = chrom_filenames[chrom]
