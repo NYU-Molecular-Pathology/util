@@ -865,7 +865,7 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
     # jobs in error state; won't finish
     err_jobs = []
     num_jobs = len(jobs)
-    logger.info('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
+    logger.debug('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
     if print_verbose: print('Monitoring jobs for completion. Number of jobs in queue: {0}'.format(num_jobs))
     while num_jobs > 0:
         # check number of jobs in the list
@@ -880,7 +880,7 @@ def monitor_jobs(jobs = None, kill_err = True, print_verbose = False, **kwargs):
             if job.error():
                 err_jobs.append(jobs.pop(i))
         sleep(5)
-    logger.info('No jobs remaining in the job queue')
+    logger.debug('No jobs remaining in the job queue')
     if print_verbose: print('No jobs remaining in the job queue')
 
     # check if there were any jobs left in error state
