@@ -46,7 +46,7 @@ def find(search_dir, inclusion_patterns = ('*',), exclusion_patterns = (), searc
     if num_limit != None:
         matches = []
         for item in find_gen(search_dir = search_dir, inclusion_patterns = inclusion_patterns, exclusion_patterns = exclusion_patterns, search_type = search_type, level_limit = level_limit, match_mode = match_mode):
-            if len(matches) <= int(num_limit):
+            if len(matches) < int(num_limit):
                 matches.append(item)
         # logger.debug("Matches found: {0}".format(matches))
         return(matches)
@@ -170,7 +170,7 @@ def walklevel(some_dir, level=1):
     Examples
     ----------
     Example usage::
-    
+
         file_list = []
         for item in pf.walklevel(some_dir):
             if (item.endswith('my_file.txt') and os.path.isfile(item) ):
