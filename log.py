@@ -76,6 +76,41 @@ def _email_logpath():
     print(email_log_file)
     return(logpath(logfile = email_log_file))
 
+def logger_from_configs(name, primary_config_yaml, backup_config_yaml, logger_name):
+    """
+    Creates a logger for the module with conditional loading of a backup logging config file
+
+    Parameters
+    ----------
+    name: str
+        the name of the module calling the function e.g. ``__name__``
+    primary_config_yaml: str
+        the YAML formatted config file to load if ``__name__ == "__main__"``
+    backup_config_yaml: str
+        a backup config file to use in case ``__name__ != "__main__"``
+    logger_name: str
+        name for the logger obect, should correspond to one defined in the YAML config file
+
+    Returns
+    -------
+    logging.Logger
+    
+    Examples
+    --------
+    Example usage::
+
+        from util import log
+        primary_config_yaml = 'config.yaml'
+        backup_config_yaml = 'basic_config.yaml'
+        logger = log.logger_from_configs(name = __name__, primary_config_yaml = primary_config_yaml, backup_config_yaml = backup_config_yaml, logger_name = 'run')
+
+    """
+    if name == "__main__":
+        logger = log_setup(config_yaml = primary_config_yaml, logger_name = logger_name)
+    else:
+        logger = log_setup(config_yaml = backup_config_yaml, logger_name = logger_name)
+    return(logger)
+
 
 def logpath(logfile = 'log.txt'):
     """
