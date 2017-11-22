@@ -18,6 +18,65 @@ def timestamp():
     """
     return('{:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now()))
 
+def timestamp2():
+    """
+    Returns a timestamp string
+    """
+    return('{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now()))
+
+def _logpath():
+    """
+    Uses the module's ``log_file`` object to create a FileHandler
+
+    Returns
+    -------
+    logging.FileHandler
+        a Python logging FileHandler object configured with a log file path set dynamically at program run time
+
+    Notes
+    -----
+    ``log_file`` should be set externally
+
+    Examples
+    --------
+    Example usage::
+
+        from util import log
+        log.log_file = "/path/to/log"
+        logpath = log._logpath
+        logpath()
+
+    """
+    print(log_file)
+    return(logpath(logfile = log_file))
+
+def _email_logpath():
+    """
+    Uses the module's ``email_log_file`` object to create a FileHandler
+
+    Notes
+    -----
+    ``email_log_file`` should be set externally
+
+    Returns
+    -------
+    logging.FileHandler
+        a Python logging FileHandler object configured with a log file path set dynamically at program run time
+
+    Examples
+    --------
+    Example usage::
+
+        from util import log
+        log.email_log_file = "/path/to/log"
+        email_logpath = log._email_logpath
+        email_logpath()
+
+    """
+    print(email_log_file)
+    return(logpath(logfile = email_log_file))
+
+
 def logpath(logfile = 'log.txt'):
     """
     Return the path to the main log file; needed by the logging.yml
