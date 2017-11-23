@@ -28,7 +28,13 @@ class SubprocessCmd(object):
     """
     A command to be run in subprocess
 
-    run_cmd = SubprocessCmd(command = 'echo foo').run()
+    Examples
+    --------
+    Example usage::
+
+        run_cmd = SubprocessCmd(command = 'echo foo').run()
+        logger.debug(run_cmd.proc_stdout)
+        logger.debug(run_cmd.proc_stderr)
     """
     def __init__(self, command):
         self.command = command
@@ -110,6 +116,13 @@ def timestamp():
     """
     import datetime
     return('{:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now()))
+
+def timestamp2():
+    """
+    Return a timestamp string
+    """
+    import datetime
+    return('{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now()))
 
 def print_dict(mydict):
     """

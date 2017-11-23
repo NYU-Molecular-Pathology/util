@@ -47,7 +47,6 @@ def _logpath():
         logpath()
 
     """
-    print(log_file)
     return(logpath(logfile = log_file))
 
 def _email_logpath():
@@ -73,7 +72,6 @@ def _email_logpath():
         email_logpath()
 
     """
-    print(email_log_file)
     return(logpath(logfile = email_log_file))
 
 def logger_from_configs(name, primary_config_yaml, backup_config_yaml, logger_name):
@@ -94,7 +92,7 @@ def logger_from_configs(name, primary_config_yaml, backup_config_yaml, logger_na
     Returns
     -------
     logging.Logger
-    
+
     Examples
     --------
     Example usage::
