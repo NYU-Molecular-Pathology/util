@@ -5,9 +5,23 @@ Functions for finding files and dirs
 
 tested with python 2.7
 """
+import sys
+import subprocess
+import sh
 import logging
+import tools
 logger = logging.getLogger("git")
 logger.debug("loading git module")
+
+def init(dir = '.', add_all = False):
+    """
+    Initializes a new git repo
+    """
+    with tools.DirHop(dir) as d:
+        sh.git.init()
+        if add_all:
+            sh.git.add('.')
+            sh.git.commit('-m', 'first commit')
 
 def parse_git(attribute):
     """
@@ -16,8 +30,6 @@ def parse_git(attribute):
     attribute = "hash_short"
     attribute = "branch"
     """
-    import sys
-    import subprocess
     command = None
     if attribute == "hash":
         command = ['git', 'rev-parse', 'HEAD']
@@ -39,8 +51,6 @@ def print_iter(iterable):
     for item in iterable: logger.debug(item)
 
 def validate_branch(allowed = ('master', 'production')):
-    import sys
-    import subprocess
     try:
         current_branch = parse_git(attribute = "branch")
         if current_branch not in allowed:
