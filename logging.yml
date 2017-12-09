@@ -51,3 +51,7 @@ loggers:
     level: DEBUG
     handlers: [console, main]
     propagate: true
+  annotate:
+    level: DEBUG
+    handlers: [console, main]
+    propagate: true

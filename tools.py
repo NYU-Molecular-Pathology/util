@@ -290,3 +290,35 @@ def copy_and_overwrite(from_path, to_path):
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
     shutil.copytree(from_path, to_path)
+
+def fullpath(path):
+    """
+    Returns the full absolute real path to a file
+
+    Parameters
+    ----------
+    path: str
+        the path to a file
+
+    Returns
+    -------
+    str
+        the file's full real path
+    """
+    return(os.path.realpath(os.path.expanduser(path)))
+
+def missing_item_kill(item, logger = None):
+    """
+    Kills the program if the file or directory does not exist
+
+    Parameters
+    ----------
+    item: str
+        path to a file or directory
+    logger: logging
+        a logger object to print messages to
+    """
+    if not item_exists(item = item):
+        if logger:
+            logger.error('Expected item does not exist: {0}'.format(item))
+        sys.exit()
