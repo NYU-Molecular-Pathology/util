@@ -704,7 +704,7 @@ def get_job_ID_name(proc_stdout):
     return((job_id, job_name))
 
 
-def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_log_dir = None, stderr_log_dir = None, return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False, **kwargs):
+def submit_job(command = 'echo foo', params = '-j y', queue_arg = '-q all.q', name = "python", stdout_log_dir = None, stderr_log_dir = None, return_stdout = False, verbose = False, pre_commands = 'set -x', post_commands = 'set +x', sleeps = 0.5, print_verbose = False, **kwargs):
     """
     Internal function for submitting compute jobs to the HPC cluster running SGE by using the `qsub` shell command. Call this function with `submit` instead; args and kwargs will be evaluated here. Creates a `qsub` shell command to be run in a subprocess, submitting the cluster job with a bash heredoc wrapper.
     Basic format for job submission to the SGE cluster with qsub
@@ -716,6 +716,8 @@ def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_lo
         shell commands to be run inside the compute job
     params: str
         extra params to be passed to `qsub`
+    queue_arg: str
+        argument to specify which HPC job queue to submit to
     name: str
         the name of the qsub compute job
     stdout_log_dir: str
@@ -767,7 +769,7 @@ def submit_job(command = 'echo foo', params = '-j y', name = "python", stdout_lo
     if not stderr_log_dir:
         stderr_log_dir = os.path.join(os.getcwd(), '')
     qsub_command = """
-qsub {0} -N "{1}" -o :"{2}" -e :"{3}" <<E0F
+qsub {0} -N "{1}" -o :"{2}" -e :"{3}" {7} <<E0F
 {4}
 {5}
 {6}
@@ -779,7 +781,8 @@ stdout_log_dir, # 2
 stderr_log_dir, # 3
 pre_commands, # 4
 command, # 5
-post_commands # 6
+post_commands, # 6
+queue_arg #7
 )
     if verbose == True:
         logger.debug('qsub command is:\n{0}'.format(qsub_command))
