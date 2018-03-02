@@ -83,7 +83,7 @@ class IEMFile(object):
         return(data)
 
     def __repr__(self):
-        return(self.data)
+        return(self)
     def __str__(self):
         return(json.dumps(self.data))
     def __len__(self):
