@@ -5,6 +5,7 @@ Functions for working with SQLite databases
 """
 import sqlite3
 import hashlib
+import csv
 
 # ~~~~~ FUNCTIONS ~~~~~ #
 def get_table_names(conn):
@@ -25,7 +26,7 @@ def get_table_names(conn):
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         names = cursor.fetchall()
-    return(names)
+    return([item for sublist in names for item in sublist])
 
 def create_table(conn, table_name, col_name, col_type, is_primary_key = False):
     """
@@ -209,7 +210,7 @@ def get_vals(conn, table_name, select_col, match_col, value):
         get_val(conn = conn, table_name = "runs", select_col = "samplesheet", match_col = "run", value = "180213_NB501073_0034_AHWJLLAFXX")
 
         # SELECT samplesheet FROM runs WHERE run = "180213_NB501073_0034_AHWJLLAFXX";
-        
+
     """
     sql_cmd = "SELECT {0} FROM {1} WHERE {2} = '{3}'".format(select_col, table_name, match_col, value)
     results = []
@@ -219,3 +220,56 @@ def get_vals(conn, table_name, select_col, match_col, value):
         for item in data:
             results.append(item[0])
     return(results)
+
+def dump_sqlite(conn, output_file):
+    """
+    Dumps the contents of a database to a SQLite formatted output file
+
+    Parameters
+    ----------
+    conn: sqlite3.Connection object
+        connection object to the database
+    output_file: str
+        file to write SQLite output to
+    """
+    with open(output_file, "w") as f:
+        for line in conn.iterdump():
+            f.write("{0}\n".format(line))
+
+def load_sqlite(conn, sqlite_file):
+    """
+    Loads a database from a SQLite formatted file
+
+    Parameters
+    ----------
+    conn: sqlite3.Connection object
+        connection object to the database
+    """
+    with open(sqlite_file) as f:
+        sql_cmd = f.read()
+        conn.executescript(sql_cmd)
+
+def dump_csv(conn, table_name, output_file, delimiter = ',', quoting = csv.QUOTE_MINIMAL):
+    """
+    Dumps a table from a SQLite database to a file
+
+    Parameters
+    ----------
+    conn: sqlite3.Connection object
+        connection object to the database
+    table_name: str
+        the name of the table to be dumped
+    output_file: str
+        the name of the file to write the table contents to
+    delimiter: str
+        field delimter for output file
+    quoting: csv.CONSTANT
+        ``csv`` module constant to be used for quoting of the output file (https://docs.python.org/2/library/csv.html#csv.QUOTE_ALL)
+    """
+    colnames = get_colnames(conn = conn, table_name = table_name)
+    cursor = conn.cursor()
+    with open(output_file, "w") as f:
+        writer = csv.DictWriter(f, delimiter = delimiter, fieldnames = colnames, quoting = quoting)
+        writer.writeheader()
+        for item in cursor.execute("SELECT * FROM runs"):
+            writer.writerow({key:value for key, value in zip(colnames, item)})
