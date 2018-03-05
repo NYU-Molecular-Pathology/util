@@ -12,3 +12,8 @@ install: venv/bin/activate activate
 	export PYTHONPATH= && \
 	source venv/bin/activate && \
 	pip install -r requirements.txt
+
+# cleanup
+clean:
+	rm -f fixtures/foo*_*
+	rm -f fixtures/test_dump.csv
