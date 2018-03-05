@@ -271,5 +271,19 @@ def dump_csv(conn, table_name, output_file, delimiter = ',', quoting = csv.QUOTE
     with open(output_file, "w") as f:
         writer = csv.DictWriter(f, delimiter = delimiter, fieldnames = colnames, quoting = quoting)
         writer.writeheader()
-        for item in cursor.execute("SELECT * FROM runs"):
+        for item in cursor.execute("SELECT * FROM {0}".format(table_name)):
             writer.writerow({key:value for key, value in zip(colnames, item)})
+
+def sanitize_str(string):
+    """
+    Cleans a character string for use in the database as a header
+    """
+    string = string.strip().replace(' ', '_')
+    return(string)
+
+def sanitize_dict_keys(d):
+    """
+    Cleans a dictionary's keys for use in the database as a header by creating a new dict with 'cleaned' keys
+    """
+    new_dict = { sanitize_str(key): value for key, value in d.items() }
+    return(new_dict)
