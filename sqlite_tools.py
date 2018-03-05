@@ -28,7 +28,7 @@ def get_table_names(conn):
         names = cursor.fetchall()
     return([item for sublist in names for item in sublist])
 
-def create_table(conn, table_name, col_name, col_type, is_primary_key = False):
+def create_table(conn, table_name, col_name, col_type = "TEXT", is_primary_key = False):
     """
     Create a table if it doesnt exist with a starting column
 
@@ -79,7 +79,7 @@ def get_colnames(conn, table_name):
             colnames.append(item[0])
     return(colnames)
 
-def add_column(conn, table_name, col_name, col_type, default_val = None):
+def add_column(conn, table_name, col_name, col_type = "TEXT", default_val = None):
     """
     Adds a column to a table
 
