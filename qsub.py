@@ -23,7 +23,13 @@ import json
 try:
     from sh import qstat
 except:
-    logger.error("qstat could not be loaded")
+    logger.error("qstat could not be loaded, using dummy function instead")
+    print("WARNING: qstat could not be loaded, using dummy function instead")
+    def qstat():
+        """
+        Dummy function for ``qstat`` in the module
+        """
+        return("")
 import tools
 
 # ~~~~ GLOBALS ~~~~~~ #
@@ -170,10 +176,6 @@ class Job(object):
         str
         """
         import re
-        try:
-            from sh import qstat
-        except:
-            logger.error("qstat could not be loaded")
         job_id_pattern = r"^\s*{0}\s.*$".format(id)
         if not qstat_stdout:
             qstat_stdout = qstat()
