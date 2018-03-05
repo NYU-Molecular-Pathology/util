@@ -6,6 +6,7 @@ Run all the unit tests
 """
 
 import unittest
+import sys
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()
@@ -13,4 +14,5 @@ if __name__ == "__main__":
     suite = loader.discover(start_dir)
 
     runner = unittest.TextTestRunner()
-    runner.run(suite)
+    ret = not runner.run(suite).wasSuccessful()
+    sys.exit(ret)
