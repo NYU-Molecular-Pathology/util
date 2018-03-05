@@ -1,2 +1,4 @@
 *.pcy
 *.pyc
+venv/
+activate
