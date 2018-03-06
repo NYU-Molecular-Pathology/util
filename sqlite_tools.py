@@ -108,7 +108,7 @@ def add_column(conn, table_name, col_name, col_type = "TEXT", default_val = None
         # the column already exists...
         pass
 
-def sqlite_insert(conn, table_name, row, ignore = False):
+def sqlite_insert(conn, table_name, row, ignore = False, update = False, add_missing_cols = False):
     """
     Inserts a row into a table
 
@@ -122,6 +122,8 @@ def sqlite_insert(conn, table_name, row, ignore = False):
         a dictionary of key: value pairs corresponding to the column names and values of the items in the row to be added
     ignore: bool
         whether the entry should be ignored if it already exists in the table
+    add_missing_cols: bool
+        whether missing columns should be added to the table. Note: default column type will be used.
 
     Examples
     --------
@@ -131,14 +133,25 @@ def sqlite_insert(conn, table_name, row, ignore = False):
         sqlite_insert(conn = conn, table_name = vals_table_name, row = row, ignore = True)
 
     """
+    if add_missing_cols:
+        colnames = get_colnames(conn = conn, table_name = table_name)
+        for key in row.keys():
+            if key not in colnames:
+                add_column(conn = conn, table_name = table_name, col_name = key)
     cols = ', '.join('"{0}"'.format(col) for col in row.keys())
     vals = ', '.join(':{0}'.format(col) for col in row.keys())
     sql = 'INSERT '
     if ignore:
         sql = sql + 'OR IGNORE '
     sql = sql + 'INTO "{0}" ({1}) VALUES ({2})'.format(table_name, cols, vals)
+    # print(sql)
     with conn:
         conn.cursor().execute(sql, row)
+    # if update:
+    #     for key, value in row.items():
+    #         sql = 'UPDATE "{0}" SET {1} = {2} WHERE  '
+    # UPDATE my_table SET age = 34 WHERE name='Karen'
+    # self.cursor.execute("SELECT weight FROM Equipment WHERE name = ?", [item])
 
 def md5_str(item):
     """
