@@ -287,11 +287,45 @@ def dump_csv(conn, table_name, output_file, delimiter = ',', quoting = csv.QUOTE
         for item in cursor.execute("SELECT * FROM {0}".format(table_name)):
             writer.writerow({key:value for key, value in zip(colnames, item)})
 
+def import_csv(conn, table_name, input_file, delimiter = ',', add_hash = False):
+    """
+    Imports a .csv file into the SQLite database
+
+    Parameters
+    ----------
+    conn: sqlite3.Connection object
+        connection object to the database
+    table_name: str
+        the name of the SQLite table to import data to
+    input_file: str
+        the name of the file to import data from
+    delimiter: str
+        field delimiter for the input file
+    add_hash: bool
+        adds a field labeled 'hash' with the md5sum of each entry
+    """
+    with open(input_file) as f:
+        reader = csv.DictReader(f, delimiter = delimiter)
+        for row in reader:
+            # re-build dict with clean colname keys
+            row = sanitize_dict_keys(d = row)
+            # add entry hash
+            if add_hash:
+                row['hash'] = md5_str(''.join(row.values()))
+            # add missing columns to db table
+            for key in row.keys():
+                add_column(conn = conn, table_name = table_name, col_name = key, col_type = "TEXT")
+            # add the entry to the db
+            sqlite_insert(conn = conn, table_name = table_name, row = row)
+
 def sanitize_str(string):
     """
     Cleans a character string for use in the database as a header
     """
     string = string.strip().replace(' ', '_')
+    string = string.replace('.', '_')
+    string = string.replace(':', '_')
+    string = string.replace('#', '')
     return(string)
 
 def sanitize_dict_keys(d):
