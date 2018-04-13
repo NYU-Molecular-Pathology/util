@@ -13,6 +13,8 @@ class IEMFile(object):
     """
     Class for parsing an IEMFileVersion 4 SampleSheet.csv samplesheet used for Illumina NextSeq sequencer into a Python object
 
+    https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
+
     Examples
     --------
     Example usage::
@@ -25,10 +27,14 @@ class IEMFile(object):
         y.data['Data']['Samples']
         # ... list of sample dicts
 
+        # check if the sheet is valid
+        y.isValid(_raise = True)
     """
-    def __init__(self, path):
+    def __init__(self, path, debug = False):
         self.path = path
         self.data = self.load_data(path = self.path)
+        self.validations = self.get_validations()
+
 
     def load_data(self, path = None):
         """
@@ -82,6 +88,126 @@ class IEMFile(object):
             for row in reader:
                 data['Data']['Samples'].append(row)
         return(data)
+
+    def validate_lines(self):
+        """
+        Checks the samplesheet file and data to make sure it follows standard spec listed here:
+        https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
+
+        Notes
+        -----
+        This function will first check every character in every line in the file
+
+        Returns
+        -------
+        dict:
+            a dictionary of key:value pairs in the format of 'illegal line': ['illegal characters']
+        """
+        # ~~~~~~~~~~~~~~ VALIDATION CRITERIA ~~~~~~~~~~~~~~~~~~~~ #
+        permitted_in_file_chars = (
+        '\n', '\r', ' ', "!", '"', "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        ":", ";", "<", "=", ">", "?", "@",
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+        "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+        "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+        "[", "]", "^", "_", "`", "{", "|", "}", "~",
+        "\\" # \
+        )
+        permitted_in_file_codes = tuple([ ord(i) for i in permitted_in_file_chars ])
+        """
+        Valid Sample Sheet files are encoded in unicode transformation format, 8 bit (UTF-8) without byte order mark (BOM). A specific list of characters is permitted in the file (Table 1).
+        """
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # check every line in the file for illegal characters
+        illegal_lines = defaultdict(list)
+        with open(self.path) as f:
+            for line in f:
+                for character in line:
+                    if ( character not in permitted_in_file_chars ) or ( ord(character) not in permitted_in_file_codes ):
+                        illegal_lines[line].append(character)
+        return(illegal_lines)
+
+    def validate_sampleIDs(self):
+        """
+        Checks the samplesheet file and data to make sure it follows standard spec listed here:
+        https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
+
+        Notes
+        -----
+        This function will check the characters and length of each value in the Sample_ID column
+
+        Returns
+        -------
+        tuple
+            a tuple in format of ( ['illegal Sample IDs'], dict( 'Sample ID': ['illegal characters'] ) )
+        """
+        # ~~~~~~~~~~~~~~ VALIDATION CRITERIA ~~~~~~~~~~~~~~~~~~~~ #
+        permitted_in_Sample_ID_codes = (
+        48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+        65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+        97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
+        45,
+        95
+        )
+        permitted_in_Sample_ID_chars = tuple([ chr(i) for i in permitted_in_Sample_ID_codes ])
+        Sample_ID_char_len_limit = 100
+        """
+        The field for the Sample_ID column has special character restrictions as only alphanumeric (ASCII codes 48-57, 65- 90, and 97-122), dash (ASCII code 45), and underscore (ASCII code 95) are permitted. The Sample_ID length is limited to 100 characters maximum.
+        """
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+        # check every Sample_ID value in the Data
+        illegal_samples_len = []
+        illegal_samples_char = defaultdict(list)
+        samples = self.data['Data']['Samples']
+        for sample in samples:
+            sample_ID = sample['Sample_ID']
+            ID_length = len(sample_ID)
+            if ID_length > Sample_ID_char_len_limit:
+                illegal_samples_len.append(sample_ID)
+            for character in sample_ID:
+                if ( character not in permitted_in_Sample_ID_chars ) or ( ord(character) not in permitted_in_Sample_ID_codes ):
+                    illegal_samples_char[sample_ID].append(character)
+        return( illegal_samples_len, illegal_samples_char )
+
+
+    def get_validations(self):
+        """
+        Gathers the validation information about the object and checks for the presence of errors
+        """
+        illegal_lines = self.validate_lines()
+        illegal_samples_len, illegal_samples_char = self.validate_sampleIDs()
+
+        any_errors = False
+        if len(illegal_lines.keys()) > 0:
+            any_errors = True
+        if len(illegal_samples_len) > 0:
+            any_errors = True
+        if len(illegal_samples_char.keys()) > 0:
+            any_errors = True
+        validations = {
+        'illegal_lines': illegal_lines,
+        'illegal_samples_len': illegal_samples_len,
+        'illegal_samples_char': illegal_samples_char,
+        'any_errors': any_errors
+        }
+        return(validations)
+
+    def isValid(self, _raise = False):
+        """
+        Checks if the samplesheet is valid, based on validation data
+        """
+        if self.validations['any_errors'] == True:
+            if _raise:
+                raise ValueError("ERROR: Illegal characters or values present in samplesheet;\n{0}".format(self.validations))
+            # samplesheet is not valid if errors are present
+            return(False)
+        elif self.validations['any_errors'] == False:
+            return(True)
+        else:
+            raise ValueError("ERROR: Unrecognized value for self.validations['any_errors']: {0}".format(self.validations['any_errors']))
 
     def __repr__(self):
         return(self)

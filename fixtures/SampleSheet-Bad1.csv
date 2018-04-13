@@ -1,0 +1,48 @@
+[Header],,,,,,
+IEMFileVersion,4,,,,,
+Investigator Name,,,,,,
+Project Name,NS18-14,,,,,
+Experiment Name,NS18-14,,,,,
+Date,4/10/18,,,,,
+Workflow,GenerateFASTQ,,,,,
+Application,FASTQ Only,,,,,
+Assay,KAPA-IDT,,,,,
+Description,Description,,,,,
+Chemistry,Capture Enrichment,,,,,
+[Reads],,,,,,
+151,,,,,,
+151,,,,,,
+[Settings],,,,,,
+AdapterSequenceRead1,AGATCGGAAGAGCACACGTC,,,,,
+AdapterSequenceRead2,AGATCGGAAGAGCGTCGTGT,,,,,
+,,,,,,
+[Data],,,,,,
+Sample_ID,Sample_Name,I7_Index_ID,index,Sample_Project,Description,GenomeFolder
+Sample1,Sample1,A054,GGAGAACA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample2+2,Sample2+2,A066,TGGCTTCA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample3,Sample3,A078,AGCCATGC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample4:1,Sample4:1,A090,CGGATTGC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample5,Sample5,A007,CAGATCTG,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6,Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6Sample6,A019,ACAGCAGA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample7,Sample7,A031,GACTAGTA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample8,Sample8,A043,CTCAATGA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample9,Sample9,A055,GGTGCGAA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample10,Sample10,A067,TGGTGGTA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample11,Sample11,A079,AGGCTAAC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample12,Sample12,A091,CTAAGGTC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample13,Sample13,A008,CATCAAGT,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample14,Sample14,A020,ACCTCCAA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample15,Sample15,A032,CAATGGAA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample16,Sample16,A044,CTGAGCCA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample17,Sample17,A056,GTACGCAA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample18,Sample18,A068,TTCACGCA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample19,Sample19,A080,ATAGCGAC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample20,Sample20,A092,GAACAGGC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample21,Sample21,A009,CGCTGATC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample22,Sample22,A021,ACGCTCGA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample23,Sample23,A033,CACTTCGA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample24,Sample24,A045,CTGGCATA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample25,Sample25,A057,GTCGTAGA,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample26,Sample26,A069,AACTCACC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample27,Sample27,A081,ATCATTCC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
+Sample28,Sample28,A093,GACAGTGC,NS18-14,Description,PhiX\Illumina\RTA\Sequence\WholeGenomeFASTA
