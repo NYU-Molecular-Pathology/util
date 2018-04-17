@@ -289,7 +289,7 @@ def dump_csv(conn, table_name, output_file, delimiter = ',', quoting = csv.QUOTE
 
 def import_csv(conn, table_name, input_file, delimiter = ',', add_hash = False):
     """
-    Imports a .csv file into the SQLite database
+    Imports a .csv file into a pre-existing SQLite database
 
     Parameters
     ----------
@@ -317,6 +317,52 @@ def import_csv(conn, table_name, input_file, delimiter = ',', add_hash = False):
                 add_column(conn = conn, table_name = table_name, col_name = key, col_type = "TEXT")
             # add the entry to the db
             sqlite_insert(conn = conn, table_name = table_name, row = row)
+
+def csv2sqlite(conn, input_file, table_name, delimiter = ','):
+    """
+    Imports a .csv file to a new database
+
+    Parameters
+    ----------
+    conn: sqlite3.Connection object
+        connection object to the database
+    table_name: str
+        the name of the SQLite table to import data to
+    input_file: str
+        the name of the file to import data from
+    delimiter: str
+        field delimiter for the input file
+
+    Notes
+    -----
+    Only use this with a new empty SQLite database connection (no tables, no columns). Imports all fields as TEXT. Does not add primary keys. Sanitizes column names for use with SQLite. 
+
+    Examples
+    --------
+    Example usage::
+
+        import sqlite3
+        from util import sqlite_tools as sqt
+        input_file = "data.tsv"
+        output_file = "data.sqlite"
+        conn = sqlite3.connect(output_file)
+        sqt.csv2sqlite(conn = conn, input_file = input_file, output_file = output_file, table_name = "mydata", delimiter = '\t')
+
+    """
+    with open(input_file) as f:
+        reader = csv.DictReader(f, delimiter = delimiter)
+        # create table in conn if not present
+        if table_name not in get_table_names(conn):
+            create_table(conn = conn, table_name = table_name, col_name = reader.fieldnames[0], col_type = "TEXT", is_primary_key = False)
+        for row in reader:
+            # re-build dict with clean colname keys
+            row = sanitize_dict_keys(d = row)
+            # add missing columns to db table
+            for key in row.keys():
+                add_column(conn = conn, table_name = table_name, col_name = key, col_type = "TEXT")
+            # add the entry to the db
+            sqlite_insert(conn = conn, table_name = table_name, row = row)
+
 
 def sanitize_str(string):
     """
