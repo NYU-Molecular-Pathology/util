@@ -172,6 +172,26 @@ class IEMFile(object):
                     illegal_samples_char[sample_ID].append(character)
         return( illegal_samples_len, illegal_samples_char )
 
+    def duplicated_sampleIDs(self):
+        """
+        Finds duplicated sample IDs in the sample sheet
+
+        Returns
+        -------
+        list
+            a list of the duplicated sample IDs
+        """
+        samples = [ x['Sample_ID'] for x in self.data['Data']['Samples'] ]
+        seen = {}
+        dupes = []
+        for sample in samples:
+            if sample not in seen:
+                seen[sample] = 1
+            else:
+                if seen[sample] == 1:
+                    dupes.append(sample)
+                seen[sample] += 1
+        return(dupes)
 
     def get_validations(self):
         """
@@ -179,6 +199,7 @@ class IEMFile(object):
         """
         illegal_lines = self.validate_lines()
         illegal_samples_len, illegal_samples_char = self.validate_sampleIDs()
+        duplicated_samples = self.duplicated_sampleIDs()
 
         any_errors = False
         if len(illegal_lines.keys()) > 0:
@@ -187,10 +208,13 @@ class IEMFile(object):
             any_errors = True
         if len(illegal_samples_char.keys()) > 0:
             any_errors = True
+        if len(duplicated_samples) > 0:
+            any_errors = True
         validations = {
         'illegal_lines': illegal_lines,
         'illegal_samples_len': illegal_samples_len,
         'illegal_samples_char': illegal_samples_char,
+        'duplicated_samples' : duplicated_samples,
         'any_errors': any_errors
         }
         return(validations)

@@ -9,6 +9,7 @@ import samplesheet
 samplesheet1 = "fixtures/SampleSheet.csv"
 samplesheet_bad_samples = "fixtures/SampleSheet-Bad1.csv"
 samplesheet_bad_lines = "fixtures/SampleSheet-Bad2.csv"
+samplesheet_dups = "fixtures/SampleSheet-dup.csv"
 
 class TestSuperFilter(unittest.TestCase):
     def test_true(self):
@@ -30,6 +31,10 @@ class TestSuperFilter(unittest.TestCase):
 
     def test_IEMFile_sheet_invalid_samples1(self):
         sheet_obj = samplesheet.IEMFile(path = samplesheet_bad_samples)
+        self.assertRaises(ValueError, sheet_obj.isValid, _raise = True)
+
+    def test_IEMFile_duplicate_samples1(self):
+        sheet_obj = samplesheet.IEMFile(path = samplesheet_dups)
         self.assertRaises(ValueError, sheet_obj.isValid, _raise = True)
 
 if __name__ == '__main__':
