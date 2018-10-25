@@ -83,7 +83,7 @@ class IEMFile(object):
         data['Data']['Samples'] = []
         with open(path) as f:
             for i in range(data_line + 1):
-                f.next()
+                next(f)
             reader = csv.DictReader(f)
             for row in reader:
                 data['Data']['Samples'].append(row)
