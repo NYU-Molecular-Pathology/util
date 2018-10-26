@@ -3,11 +3,14 @@
 """
 Functions for parsing samplesheets
 """
+import os
 import re
 import csv
 from collections import defaultdict
 import json
 import xml.etree.ElementTree as ET
+import hashlib
+import socket
 
 class IEMFile(object):
     """
@@ -34,6 +37,17 @@ class IEMFile(object):
         self.path = path
         self.data = self.load_data(path = self.path)
         self.validations = self.get_validations()
+
+        with open(path, 'rb') as f:
+            self.md5 = hashlib.md5(f.read()).hexdigest()
+
+        self.meta = {
+        'Sheet_file': os.path.basename(self.path),
+        'Sheet_path': os.path.realpath(self.path),
+        'Sheet_givenpath': self.path,
+        'Sheet_md5': self.md5,
+        'Sheet_host': socket.gethostname()
+        }
 
 
     def load_data(self, path = None):
@@ -88,6 +102,26 @@ class IEMFile(object):
             for row in reader:
                 data['Data']['Samples'].append(row)
         return(data)
+
+    def flatten(self):
+        """
+        Returns a copy of a 'flat' version of the Samples data that includes all keys from other samplesheet sections
+
+        dict_keys(['Header', 'Reads', 'Settings', 'Data'])
+        """
+        dicts = []
+        for d in self.data['Data']['Samples']:
+            newdict = dict((k, v) for k, v in d.items())
+            if 'Header' in self.data:
+                newdict.update(self.data['Header'])
+            if 'Reads' in self.data:
+                newdict.update(self.data['Reads'])
+            if 'Settings' in self.data:
+                newdict.update(self.data['Settings'])
+            newdict.update(self.meta)
+            dicts.append(newdict)
+        return(dicts)
+
 
     def validate_lines(self):
         """
