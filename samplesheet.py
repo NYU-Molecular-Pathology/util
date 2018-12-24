@@ -319,7 +319,11 @@ class RunParametersXML(object):
         root = tree.getroot()
         params_dict = {}
         for key in keys:
-            params_dict[key] = root.find(key).text
+            # in case key not found return None
+            try:
+                params_dict[key] = root.find(key).text
+            except:
+                params_dict[key] = root.find(key)
         return(params_dict)
 
 
