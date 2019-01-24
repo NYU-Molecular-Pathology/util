@@ -1,190 +1,392 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Convert SLURM squeue output to JSON format
+Module for working with SLURM on HPC cluster
+
+Tested with SLURM version 17.11.7
 """
 import subprocess as sp
 from collections import defaultdict
 
-def parse_SLURM_table(proc_stdout):
+def parse_SLURM_table(stdout):
     """
-    Convert the table formated output of SLURM sinfo, squeue, etc., commands into a list of dicts
+    Convert the table formated output of SLURM 'sinfo -o '%all', 'squeue -o '%all', etc., commands into a list of dicts
 
     Parameters
     ----------
-    proc_stdout: str
+    stdout: str
         the stdout of a SLURM sinfo or squeue command
 
     Returns
     -------
-    list
-        a list of dicts, one for each line in the input table
+    dict
+        yields a dict of entries from each valid line in the stdout
     """
-    lines = proc_stdout.split('\n')
+    # split all the stdout lines
+    lines = stdout.split('\n')
+    # get the headers from the first line
     header_line = lines.pop(0)
+    # split the headers apart
     header_cols = header_line.split('|')
     header_cols = [ x.strip() for x in header_cols ]
-    entries = []
-    error_lines = [] # do something with this later
+    # iterate over remaining lines
     for line in lines:
+        # split each line
         parts = line.split('|')
+        parts = [ x.strip() for x in parts ]
+        # start building dict for the values
         d = {}
-        if len(parts) != len(header_cols):
-            error_lines.append((len(parts), line, parts))
+        # make sure that the stdout line has the same number of fields as the headers
+        if len(parts) == len(header_cols):
+            # fill in the dict values and yield the results
+            for i, header_col in enumerate(header_cols):
+                d[header_col] = parts[i]
+            yield(d)
         else:
-            for i, key in enumerate(header_cols):
-                d[key] = parts[i]
-            entries.append(d)
-    return(entries)
+            pass # do something here
+
 
 class Squeue(object):
     """
-    import slurm
-    x = slurm.Squeue()
-    x.get()
-    """
-    def __init__(self):
-        pass
+    View information about jobs located in the Slurm scheduling queue.
 
-    def get(self):
+    https://slurm.schedmd.com/squeue.html
+
+    Examples
+    ---------
+
+    from util import slurm
+    sq = slurm.Squeue()
+    sq.get()
+    """
+    def __init__(self, debug = False):
+        if not debug:
+            self.update()
+
+    def update(self):
         """
         """
+        returncode, entries = self.get_squeue()
+        self.returncode = returncode
+        self.entries = entries
+
+    def get_squeue(self):
+        """
+        Get the 'squeue' HPC cluster usage information
+
+        Returns
+        -------
+        int, list
+            integer error code from the 'squeue' command
+            a list of dicts representing the 'squeue' values; the case of an error, returns an empty list
+        """
+        # system command to run; "Print all fields available for this data type with a vertical bar separating each field."
         process = sp.Popen(['squeue', '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+        # run the command, capture stdout and stderr
         proc_stdout, proc_stderr = process.communicate()
-        entries = parse_SLURM_table(proc_stdout)
-        return(entries)
+        # check the exit status
+        if process.returncode == 0:
+            entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout) ]
+        else:
+            entries = []
+        return(process.returncode, entries)
 
 class Sinfo(object):
     """
+    Information about Slurm nodes and partitions.
+
+    https://slurm.schedmd.com/sinfo.html
+
+    Examples
+    ---------
     import slurm
     x = slurm.Sinfo()
-    x.get()
+    x.entries
     """
-    def __init__(self):
-        pass
+    def __init__(self, debug = False):
+        if not debug:
+            self.update()
 
-    def get(self):
+    def update(self):
         """
         """
-        process = sp.Popen(['sinfo', '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
-        proc_stdout, proc_stderr = process.communicate()
-        entries = parse_SLURM_table(proc_stdout)
-        return(entries)
-
-class Nodes(object):
-    """
-    Get the state of the nodes in the cluster
-
-    import slurm; x = slurm.Nodes(); print(x.cpus())
-    """
-    def __init__(self):
-        self.nodes = defaultdict(list)
-        for entry in self.get_sinfo():
-            self.nodes[entry['HOSTNAMES']].append(entry)
-
-    def cpus(self):
-        d = {}
-        for node in self.nodes.keys():
-            d[node] = self.get_cpu_usage(hostname = node)
-        return(d)
-
-    def get_cpu_usage(self, hostname):
-        """
-        Count of CPUs with this particular configuration by CPU state in the form "available/idle/other/total".
-        """
-        cpu_usage = list(set([ x["CPUS(A/I/O/T)"].strip() for x in self.nodes[hostname] ]))
-        parts = cpu_usage[0].split('/')
-        d = {
-        'available': parts[0],
-        'idle': parts[1],
-        'other': parts[2],
-        'total': parts[3],
-        }
-        return(d)
+        returncode, entries = self.get_sinfo()
+        self.returncode = returncode
+        self.entries = entries
 
     def get_sinfo(self):
-        process = sp.Popen(['sinfo', '-N' , '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+        """
+        Get the 'sinfo' HPC cluster usage information
+
+        Returns
+        -------
+        int, list
+            integer error code from the 'sinfo' command
+            a list of dicts representing the 'sinfo' values; the case of an error, returns an empty list
+
+        """
+        # system command to run; "Print all fields available for this data type with a vertical bar separating each field."
+        process = sp.Popen(['sinfo', '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+        # run the command, capture stdout and stderr
         proc_stdout, proc_stderr = process.communicate()
-        entries = parse_SLURM_table(proc_stdout)
-        return(entries)
+        # check the exit status
+        if process.returncode == 0:
+            entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout) ]
+        else:
+            entries = []
+        return(process.returncode, entries)
+
+
+# class Nodes(object):
+#     """
+#     Get the state of the nodes in the cluster
+#
+#
+#     Examples
+#     --------
+#     from util import slurm
+#     n = slurm.Nodes()
+#
+#     print(x.cpus())
+#     """
+#     def __init__(self, debug = False):
+#         self.nodes = {}
+#         if not debug:
+#             self.update()
+#
+#     def update(self):
+#         self.squeue = Squeue()
+#         self._get_nodes()
+#
+#     def _get_nodes():
+#         for entry in self.squeue.entries:
+#             partition = entry['PARTITION']
+#             num_nodes = entry['NODES']
+#             num_cpus = entry['CPUS']
+#
+#             # initialize new dict if not already there
+#             if partition not in self.partitions:
+#                 self.partitions[partition] = {}
+#             if state not in self.partitions[partition]:
+#                 self.partitions[partition][state] = {}
+#             if "num_nodes" not in self.partitions[partition][state]:
+#                 self.partitions[partition][state]["num_nodes"] = 0
+#
+#             # update the number of nodes for each state
+#             self.partitions[partition][state]["num_nodes"] += int(num_nodes)
+
+#         self.nodes = defaultdict(list)
+#         for entry in self.get_sinfo():
+#             self.nodes[entry['HOSTNAMES']].append(entry)
+#
+#     def cpus(self):
+#         d = {}
+#         for node in self.nodes.keys():
+#             d[node] = self.get_cpu_usage(hostname = node)
+#         return(d)
+#
+#     def get_cpu_usage(self, hostname):
+#         """
+#         Count of CPUs with this particular configuration by CPU state in the form "available/idle/other/total".
+#         """
+#         cpu_usage = list(set([ x["CPUS(A/I/O/T)"].strip() for x in self.nodes[hostname] ]))
+#         parts = cpu_usage[0].split('/')
+#         d = {
+#         'available': parts[0],
+#         'idle': parts[1],
+#         'other': parts[2],
+#         'total': parts[3],
+#         }
+#         return(d)
+#
+#     def get_sinfo(self):
+#         process = sp.Popen(['sinfo', '-N' , '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+#         proc_stdout, proc_stderr = process.communicate()
+#         entries = parse_SLURM_table(proc_stdout)
+#         return(entries)
 
 class Partitions(object):
     """
     Get the states of all partitions in the cluster
 
-    import slurm; x = slurm.Partitions(); print(x.most_idle_nodes()); print(x.most_available_nodes())
+
+    Examples
+    --------
+    import util.slurm as slurm
+
+    p = slurm.Partitions()
+
+    p.partitions
+    >>> {'gpu4_short': {'mixed': {'num_nodes': 12}, 'allocated': {'num_nodes': 2}, 'idle': {'num_nodes': 3}}, 'fn_long': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 1}}, 'cpu_long': {'mixed': {'num_nodes': 7}, 'allocated': {'num_nodes': 5}, 'idle': {'num_nodes': 1}, 'drained': {'num_nodes': 1}}, 'gpu4_long': {'mixed': {'num_nodes': 7}, 'allocated': {'num_nodes': 3}, 'idle': {'num_nodes': 1}}, 'fn_medium': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 1}}, 'gpu8_dev': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 1}, 'drained': {'num_nodes': 1}}, 'data_mover': {'idle': {'num_nodes': 3}, 'drained': {'num_nodes': 1}}, 'intellispace': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 1}}, 'dev': {'n/a': {'num_nodes': 0}}, 'gpu8_short': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 2}, 'drained': {'num_nodes': 1}}, 'gpu8_long': {'mixed': {'num_nodes': 1}, 'allocated': {'num_nodes': 1}, 'drained': {'num_nodes': 1}}, 'gpu8_medium': {'mixed': {'num_nodes': 2}, 'drained': {'num_nodes': 1}}, 'cpu_short': {'mixed': {'num_nodes': 12}, 'allocated': {'num_nodes': 2}, 'idle': {'num_nodes': 18}}, 'fn_short': {'mixed': {'num_nodes': 1}, 'idle': {'num_nodes': 1}, 'drained': {'num_nodes': 1}}, 'cpu_medium': {'mixed': {'num_nodes': 15}, 'allocated': {'num_nodes': 3}, 'down*': {'num_nodes': 1}, 'idle': {'num_nodes': 1}}, 'prod': {'n/a': {'num_nodes': 0}}, 'cpu_dev': {'mixed': {'num_nodes': 6}, 'allocated': {'num_nodes': 1}, 'idle': {'num_nodes': 2}, 'drained': {'num_nodes': 1}}, 'gpu4_dev': {'mixed': {'num_nodes': 6}, 'allocated': {'num_nodes': 2}, 'idle': {'num_nodes': 1}, 'drained': {'num_nodes': 1}}, 'gpu4_medium': {'mixed': {'num_nodes': 8}, 'allocated': {'num_nodes': 2}, 'idle': {'num_nodes': 3}}}
+
     """
-    def __init__(self):
+    def __init__(self, debug = False):
         self.partitions = {}
-        for entry in self.get_sinfo():
-            p = entry.pop('PARTITION')
-            self.partitions[p] = entry
+        if not debug:
+            self.update()
 
-    def get_sinfo(self):
-        process = sp.Popen(['sinfo', '-O', 'nodeaiot,partitionname'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
-        proc_stdout, proc_stderr = process.communicate()
-        lines = proc_stdout.split('\n')
-        header = lines.pop(0)
-        header_cols = header.split()
-        entries = []
-        for line in lines:
-            parts = line.split()
-            d = {}
-            # print(parts)
-            if len(parts) == len(header_cols):
-                for i, header_col in enumerate(header_cols):
-                    d[header_col] = parts[i]
-                entries.append(d)
-            else:
-                pass # do something here
-        return(entries)
+    def update(self):
+        self.sinfo = Sinfo()
+        self._get_partitions()
 
-    def get_node_usage(self, partition):
+    def _get_partitions(self):
+        for entry in self.sinfo.entries:
+            partition = entry['PARTITION']
+            state = entry['STATE']
+            num_nodes = entry['NODES']
+
+            # initialize new dict if not already there
+            if partition not in self.partitions:
+                self.partitions[partition] = {}
+            if state not in self.partitions[partition]:
+                self.partitions[partition][state] = {}
+            if "num_nodes" not in self.partitions[partition][state]:
+                self.partitions[partition][state]["num_nodes"] = 0
+
+            # update the number of nodes for each state
+            self.partitions[partition][state]["num_nodes"] += int(num_nodes)
+
+    def by_state(self, state, key, **kwargs):
         """
-        Count of nodes with this particular configuration by node state in the form "available/idle/other/total".
+        Get a list of values for partitions in a given state
+
+        Examples
+        --------
+        >>> p.by_state(state = "idle", key = "num_nodes")
+        {'intellispace': 1, 'cpu_dev': 2, 'cpu_short': 18, 'cpu_medium': 1, 'cpu_long': 1, 'fn_short': 1, 'fn_medium': 1, 'fn_long': 1, 'gpu4_dev': 1, 'gpu4_short': 3, 'gpu4_medium': 3, 'gpu4_long': 1, 'gpu8_dev': 1, 'gpu8_short': 2, 'data_mover': 3}
         """
-        node_usage = self.partitions[partition]['NODES(A/I/O/T)']
-        parts = node_usage.split('/')
-        d = {
-        'available': parts[0],
-        'idle': parts[1],
-        'other': parts[2],
-        'total': parts[3],
-        }
+        blacklist = kwargs.pop("blacklist", [])
+        d = { part: vals[state][key] for part, vals in self.partitions.items() if state in vals if key in vals[state] }
+        for partition in blacklist:
+            d.pop(partition, None)
         return(d)
 
-    def nodes(self):
-        """
-        Get usage of all nodes in the partitions
-        """
-        d = {}
-        for partition in self.partitions.keys():
-            d[partition] = self.get_node_usage(partition = partition)
-        return(d)
-
-    def most_idle_nodes(self):
-        """
-        Check which partition has the most idle nodes
-        """
-        nodes = self.nodes()
-        idle_nodes = {}
-        for node in nodes.keys():
-            idle_nodes[node] = int(nodes[node]['idle'])
+    def most_idle_nodes(self, **kwargs):
+        idle_nodes = self.by_state(state = "idle", key = "num_nodes", **kwargs)
         return(max(idle_nodes, key = idle_nodes.get))
 
-    def most_available_nodes(self):
-        """
-        Check which partition has the most available nodes
-        """
-        nodes = self.nodes()
-        available_nodes = {}
-        for node in nodes.keys():
-            available_nodes[node] = int(nodes[node]['available'])
-        return(max(available_nodes, key = available_nodes.get))
+    def most_mixed_nodes(self, **kwargs):
+        mixed_nodes = self.by_state(state = "mixed", key = "num_nodes", **kwargs)
+        return(max(mixed_nodes, key = mixed_nodes.get))
 
 
-def all_ints(x):
-    return(all([ is_int(y) for y in x ]))
+
+
+            # d = {}
+            # print(entry['PARTITION'])
+
+    # def get_sinfo(self):
+    #     """
+    #     Get the 'sinfo' HPC cluster usage information
+    #
+    #     https://slurm.schedmd.com/sinfo.html
+    #
+    #     sinfo -o '%P %T %F %C'
+    #
+    #     Returns
+    #     -------
+    #     int, list
+    #         integer error code from the 'sinfo' command
+    #         a list of dicts representing the 'sinfo' values; the case of an error, returns an empty list
+    #
+    #     """
+    #     # system command to run
+    #     process = sp.Popen(['sinfo', '-O', 'nodeaiot,partitionname'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+    #     # run the command, capture stdout and stderr
+    #     proc_stdout, proc_stderr = process.communicate()
+    #     # check the exit status
+    #     if process.returncode == 0:
+    #         entries = [ entry for entry in self.parse_sinfo(stdout = proc_stdout) ]
+    #     else:
+    #         entries = []
+    #     return(process.returncode, entries)
+    #
+    # def parse_sinfo(self, stdout):
+    #     """
+    #     Generator that yields dictionaries of '{ sinfo_field: sinfo_value}' pairs
+    #
+    #     Parameters
+    #     ----------
+    #     stdout: str
+    #         character string representing the stdout of the 'sinfo' command
+    #
+    #     Returns
+    #     -------
+    #     dict
+    #         yields a dict of entries from each valid line in the stdout
+    #
+    #     Examples
+    #     --------
+    #
+    #     stdout = 'NODES(A/I/O/T)      PARTITION           \n0/0/0/0             prod                \n0/0/0/0             dev                 \n1/1/0/2             intellispace        \n8/1/1/10            cpu_dev             \n17/15/0/32          cpu_short           \n18/1/1/20           cpu_medium          \n12/1/1/14           cpu_long            \n1/1/1/3             fn_short            \n1/1/0/2             fn_medium           \n1/1/0/2             fn_long             \n9/0/1/10            gpu4_dev            \n14/3/0/17           gpu4_short          \n13/0/0/13           gpu4_medium         \n11/0/0/11           gpu4_long           \n2/0/1/3             gpu8_dev            \n3/0/1/4             gpu8_short          \n2/0/1/3             gpu8_medium         \n2/0/1/3             gpu8_long           \n0/3/1/4             data_mover          \n'
+    #
+    #     [ i for i in parse_sinfo(stdout) ]
+    #     """
+    #     # split all the stdout lines
+    #     lines = stdout.split('\n')
+    #     # get the headers from the first line
+    #     header = lines.pop(0)
+    #     # split the headers apart
+    #     header_cols = header.split()
+    #     # iterate over remaining lines
+    #     for line in lines:
+    #         # split each line
+    #         parts = line.split()
+    #         # start building dict for the values
+    #         d = {}
+    #         # make sure that the stdout line has the same number of fields as the headers
+    #         if len(parts) == len(header_cols):
+    #             # fill in the dict values and yield the results
+    #             for i, header_col in enumerate(header_cols):
+    #                 d[header_col] = parts[i]
+    #             yield(d)
+    #         else:
+    #             pass # do something here
+    #
+    # def get_node_usage(self, partition, usage_field = 'NODES(A/I/O/T)'):
+    #     """
+    #     Count of nodes with this particular configuration by node state in the form "available/idle/other/total".
+    #     """
+    #     node_usage = self.partitions[partition][usage_field]
+    #     parts = node_usage.split('/')
+    #     d = {
+    #     'available': parts[0],
+    #     'idle': parts[1],
+    #     'other': parts[2],
+    #     'total': parts[3],
+    #     }
+    #     return(d)
+    #
+    # def nodes(self):
+    #     """
+    #     Get usage of all nodes in the partitions
+    #     """
+    #     d = {}
+    #     for partition in self.partitions.keys():
+    #         d[partition] = self.get_node_usage(partition = partition)
+    #     return(d)
+    #
+    # def most_idle_nodes(self):
+    #     """
+    #     Check which partition has the most idle nodes
+    #     """
+    #     nodes = self.nodes()
+    #     idle_nodes = {}
+    #     for node in nodes.keys():
+    #         idle_nodes[node] = int(nodes[node]['idle'])
+    #     return(max(idle_nodes, key = idle_nodes.get))
+    #
+    # def most_available_nodes(self):
+    #     """
+    #     Check which partition has the most available nodes
+    #     """
+    #     nodes = self.nodes()
+    #     available_nodes = {}
+    #     for node in nodes.keys():
+    #         available_nodes[node] = int(nodes[node]['available'])
+    #     return(max(available_nodes, key = available_nodes.get))
+    #
+
 
 def is_int(y):
     try:
@@ -192,6 +394,10 @@ def is_int(y):
         return(True)
     except ValueError:
         return(False)
+
+def all_ints(x):
+    return(all([ is_int(y) for y in x ]))
+
 
 def parse_nodelist(nodes_str):
     """
@@ -237,9 +443,25 @@ def parse_nodelist(nodes_str):
 
 if __name__ == '__main__':
     p = Partitions()
-    n = Nodes()
-    print("Partition with the most idle nodes: {0}".format(p.most_idle_nodes()))
-    print("Partition with the most available nodes: {0}".format(p.most_available_nodes()))
-    print("Node CPU usage:")
-    for cpu in n.cpus().keys():
-        print("{0}: {1}".format(cpu, n.cpus()[cpu]))
+    print(p.partitions)
+    partition_blacklist = [
+    "data_mover",
+    "cpu_dev",
+    "gpu4_dev",
+    "fn_short",
+    "fn_medium",
+    "fn_long",
+    "cpu_long"
+    ]
+    print("Partition with the most idle nodes: {0}".format(p.most_idle_nodes(blacklist = partition_blacklist)))
+    print("Partition with the most mixed nodes: {0}".format(p.most_mixed_nodes(blacklist = partition_blacklist)))
+    intellispace_cpus = 0
+    sq = Squeue()
+    for entry in sq.entries:
+        if entry['PARTITION'] == 'intellispace':
+            intellispace_cpus += int(entry['CPUS'])
+    print("Intellispace CPUs used/requested: {0}".format(intellispace_cpus))
+    # n = Nodes()
+    # print("Node CPU usage:")
+    # for cpu in n.cpus().keys():
+    #     print("{0}: {1}".format(cpu, n.cpus()[cpu]))
