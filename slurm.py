@@ -263,11 +263,17 @@ class Partitions(object):
 
     def most_idle_nodes(self, **kwargs):
         idle_nodes = self.by_state(state = "idle", key = "num_nodes", **kwargs)
-        return(max(idle_nodes, key = idle_nodes.get))
+        most_idle = None
+        if len(idle_nodes) > 0:
+            most_idle = max(idle_nodes, key = idle_nodes.get)
+        return(most_idle)
 
     def most_mixed_nodes(self, **kwargs):
         mixed_nodes = self.by_state(state = "mixed", key = "num_nodes", **kwargs)
-        return(max(mixed_nodes, key = mixed_nodes.get))
+        most_mixed = None
+        if len(mixed_nodes) > 0:
+            most_mixed = max(mixed_nodes, key = mixed_nodes.get)
+        return(most_mixed)
 
 
 
