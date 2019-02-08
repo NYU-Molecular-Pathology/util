@@ -137,34 +137,106 @@ class Sinfo(object):
         return(process.returncode, entries)
 
 
-# class Nodes(object):
-#     """
-#     Get the state of the nodes in the cluster
+class Nodes(object):
+    """
+    Get the state of the nodes in the cluster
+
+    Examples
+    --------
+    # import util.slurm as slurm
+    from util import slurm
+    n = slurm.Nodes()
+
+    [ i for i in n.sinfo.entries if i['HOSTNAMES']=='gpu-0006' ]
+    n.nodes['gpu-0006']['entries']
+    n.avail
+    """
+    def __init__(self, debug = False):
+        self.nodes = defaultdict(dict)
+        if not debug:
+            self.update()
+
+    def update(self):
+        self.sinfo = Sinfo()
+        self._get_nodes()
+        self.avail = self._get_avail()
+
+    def _get_nodes(self):
+        for entry in self.sinfo.entries:
+            if 'entries' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['entries'] = []
+            self.nodes[entry['HOSTNAMES']]['entries'].append(entry)
+
+            # set values based on each sinfo entry;
+            # sinfo may have multiple entries per node but these values should be the same for all of them
+            # total resources a node contains
+            if 'resources' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['resources'] = {}
+            self.nodes[entry['HOSTNAMES']]['resources']['CPUS'] = entry['CPUS']
+            self.nodes[entry['HOSTNAMES']]['resources']['SOCKETS'] = entry['SOCKETS']
+            self.nodes[entry['HOSTNAMES']]['resources']['MEMORY'] = entry['MEMORY']
+            self.nodes[entry['HOSTNAMES']]['resources']['GRES'] = entry['GRES']
+
+            # resources available to the node right now
+            if 'avail' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['avail'] = {}
+            self.nodes[entry['HOSTNAMES']]['avail']['mem'] = entry['FREE_MEM']
+            self.nodes[entry['HOSTNAMES']]['avail']['cpus'] = self.get_cpu_aiot(aiot_str = entry['CPUS(A/I/O/T)'])
+            self.nodes[entry['HOSTNAMES']]['avail']['up'] = self.is_up(reason_str = entry['REASON'])
+            self.nodes[entry['HOSTNAMES']]['avail']['state'] = entry['STATE']
+            if 'partitions' not in self.nodes[entry['HOSTNAMES']]['avail']:
+                self.nodes[entry['HOSTNAMES']]['avail']['partitions'] = []
+            self.nodes[entry['HOSTNAMES']]['avail']['partitions'].append(entry['PARTITION'])
+
+    def _get_avail(self):
+        """
+        Get the availability summary for each node
+        """
+        data = []
+        for name, values in self.nodes.items():
+            if name == '':
+                continue
+            if values['avail']['up'] != True:
+                continue
+            d = {}
+            d['node'] = name
+            d['cpu'] = values['avail']['cpus']['idle']
+            d['state'] = values['avail']['state']
+            d['mem'] = values['avail']['mem']
+            d['partitions'] = ','.join(values['avail']['partitions'])
+            data.append(d)
+        data = sorted(data, key=lambda k: k['node'])
+        return(data)
+
+    def get_cpu_aiot(self, aiot_str):
+        """
+        Parse the 'CPUS(A/I/O/T)' field in SLURM sinfo output (allocated, idle, other, total)
+
+        '0/40/0/40'
+        """
+        parts = aiot_str.split('/')
+        d = {
+        'allocated': int(parts[0]),
+        'idle': int(parts[1]),
+        'other': int(parts[2]),
+        'total': int(parts[3]),
+        }
+        return(d)
+
+    def is_up(self, reason_str):
+        """
+        Check the 'REASON' field to determine if the node is up or down
+        """
+        if reason_str == 'none':
+            return(True)
+        else:
+            return(False)
+
+            # partition = entry['PARTITION']
+            # num_nodes = entry['NODES']
+            # num_cpus = entry['CPUS']
 #
-#
-#     Examples
-#     --------
-#     from util import slurm
-#     n = slurm.Nodes()
-#
-#     print(x.cpus())
-#     """
-#     def __init__(self, debug = False):
-#         self.nodes = {}
-#         if not debug:
-#             self.update()
-#
-#     def update(self):
-#         self.squeue = Squeue()
-#         self._get_nodes()
-#
-#     def _get_nodes():
-#         for entry in self.squeue.entries:
-#             partition = entry['PARTITION']
-#             num_nodes = entry['NODES']
-#             num_cpus = entry['CPUS']
-#
-#             # initialize new dict if not already there
+            # initialize new dict if not already there
 #             if partition not in self.partitions:
 #                 self.partitions[partition] = {}
 #             if state not in self.partitions[partition]:
@@ -191,13 +263,13 @@ class Sinfo(object):
 #         """
 #         cpu_usage = list(set([ x["CPUS(A/I/O/T)"].strip() for x in self.nodes[hostname] ]))
 #         parts = cpu_usage[0].split('/')
-#         d = {
-#         'available': parts[0],
-#         'idle': parts[1],
-#         'other': parts[2],
-#         'total': parts[3],
-#         }
-#         return(d)
+        # d = {
+        # 'available': parts[0],
+        # 'idle': parts[1],
+        # 'other': parts[2],
+        # 'total': parts[3],
+        # }
+        # return(d)
 #
 #     def get_sinfo(self):
 #         process = sp.Popen(['sinfo', '-N' , '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
