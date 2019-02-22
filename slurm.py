@@ -8,7 +8,7 @@ Tested with SLURM version 17.11.7
 import subprocess as sp
 from collections import defaultdict
 
-def parse_SLURM_table(stdout):
+def parse_SLURM_table(stdout, fmt = 'o'):
     """
     Convert the table formated output of SLURM 'sinfo -o '%all', 'squeue -o '%all', etc., commands into a list of dicts
 
@@ -16,6 +16,8 @@ def parse_SLURM_table(stdout):
     ----------
     stdout: str
         the stdout of a SLURM sinfo or squeue command
+    fmt: str
+        Either 'o' for a SLURM command output with '-o' arg (default, delim with '|'), or 'O' for a command output with '-O' arg (delim with whitespace)
 
     Returns
     -------
@@ -27,12 +29,18 @@ def parse_SLURM_table(stdout):
     # get the headers from the first line
     header_line = lines.pop(0)
     # split the headers apart
-    header_cols = header_line.split('|')
+    if fmt == 'o':
+        header_cols = header_line.split('|')
+    else:
+        header_cols = header_line.split()
     header_cols = [ x.strip() for x in header_cols ]
     # iterate over remaining lines
     for line in lines:
         # split each line
-        parts = line.split('|')
+        if fmt == 'o':
+            parts = line.split('|')
+        else:
+            parts = line.split()
         parts = [ x.strip() for x in parts ]
         # start building dict for the values
         d = {}
@@ -59,7 +67,8 @@ class Squeue(object):
     sq = slurm.Squeue()
     sq.get()
     """
-    def __init__(self, debug = False):
+    def __init__(self, command = ('squeue', '-o', '%all'), debug = False):
+        self.command = command
         if not debug:
             self.update()
 
@@ -81,12 +90,15 @@ class Squeue(object):
             a list of dicts representing the 'squeue' values; the case of an error, returns an empty list
         """
         # system command to run; "Print all fields available for this data type with a vertical bar separating each field."
-        process = sp.Popen(['squeue', '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+        process = sp.Popen(self.command, stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
         # run the command, capture stdout and stderr
         proc_stdout, proc_stderr = process.communicate()
         # check the exit status
         if process.returncode == 0:
-            entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout) ]
+            if '-o' in self.command:
+                entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout, fmt = 'o') ]
+            else:
+                entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout, fmt = 'O') ]
         else:
             entries = []
         return(process.returncode, entries)
@@ -103,7 +115,8 @@ class Sinfo(object):
     x = slurm.Sinfo()
     x.entries
     """
-    def __init__(self, debug = False):
+    def __init__(self, command = ('sinfo', '-o', '%all'), debug = False):
+        self.command = command
         if not debug:
             self.update()
 
@@ -126,20 +139,131 @@ class Sinfo(object):
 
         """
         # system command to run; "Print all fields available for this data type with a vertical bar separating each field."
-        process = sp.Popen(['sinfo', '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
+        process = sp.Popen(self.command, stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
         # run the command, capture stdout and stderr
         proc_stdout, proc_stderr = process.communicate()
         # check the exit status
         if process.returncode == 0:
-            entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout) ]
+            if '-o' in self.command:
+                entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout, fmt = 'o') ]
+            else:
+                entries = [ entry for entry in parse_SLURM_table(stdout = proc_stdout, fmt = 'O') ]
         else:
             entries = []
         return(process.returncode, entries)
 
 
-# class Nodes(object):
-#     """
-#     Get the state of the nodes in the cluster
+class Nodes(object):
+    """
+    Get the state of the nodes in the cluster
+
+    Examples
+    --------
+    # import util.slurm as slurm
+    from util import slurm
+    n = slurm.Nodes()
+
+    [ i for i in n.sinfo.entries if i['HOSTNAMES']=='gpu-0006' ]
+    n.nodes['gpu-0006']['entries']
+    n.avail
+    """
+    def __init__(self, command = None, debug = False):
+        self.nodes = defaultdict(dict)
+        self.command = command
+        if not debug:
+            self.update()
+
+    def update(self):
+        if self.command:
+            self.sinfo = Sinfo(command = self.command)
+        else:
+            self.sinfo = Sinfo()
+        self._get_nodes()
+        self.avail = self._get_avail()
+
+    def _get_nodes(self):
+        for entry in self.sinfo.entries:
+            if 'entries' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['entries'] = []
+            self.nodes[entry['HOSTNAMES']]['entries'].append(entry)
+
+            # set values based on each sinfo entry;
+            # sinfo may have multiple entries per node but these values should be the same for all of them
+            # total resources a node contains
+            if 'resources' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['resources'] = {}
+            self.nodes[entry['HOSTNAMES']]['resources']['CPUS'] = entry['CPUS']
+            self.nodes[entry['HOSTNAMES']]['resources']['SOCKETS'] = entry['SOCKETS']
+            self.nodes[entry['HOSTNAMES']]['resources']['MEMORY'] = entry['MEMORY']
+            self.nodes[entry['HOSTNAMES']]['resources']['GRES'] = entry['GRES']
+
+            # resources available to the node right now
+            if 'avail' not in self.nodes[entry['HOSTNAMES']]:
+                self.nodes[entry['HOSTNAMES']]['avail'] = {}
+            if 'FREE_MEM' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['mem'] = entry['FREE_MEM']
+            if 'CPUS(A/I/O/T)' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['cpus'] = self.get_cpu_aiot(aiot_str = entry['CPUS(A/I/O/T)'])
+            if 'REASON' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['up'] = self.is_up(reason_str = entry['REASON'])
+            if 'STATE' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['state'] = entry['STATE']
+            if 'ALLOCMEM' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['allocmem'] = entry['ALLOCMEM']
+            if 'partitions' not in self.nodes[entry['HOSTNAMES']]['avail']:
+                self.nodes[entry['HOSTNAMES']]['avail']['partitions'] = []
+            if 'PARTITION' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['partitions'].append(entry['PARTITION'])
+
+    def _get_avail(self):
+        """
+        Get the availability summary for each node
+        """
+        data = []
+        for name, values in self.nodes.items():
+            if name == '':
+                continue
+            if values['avail']['up'] != True:
+                continue
+            d = {}
+            d['node'] = name
+            d['cpu'] = values['avail']['cpus']['idle']
+            d['state'] = values['avail']['state']
+            d['mem'] = values['avail']['mem']
+            d['partitions'] = ','.join(values['avail']['partitions'])
+            if 'allocmem' in values['avail']:
+                d['allocmem'] = values['avail']['allocmem']
+            data.append(d)
+        data = sorted(data, key=lambda k: k['node'])
+        return(data)
+
+    def get_cpu_aiot(self, aiot_str):
+        """
+        Parse the 'CPUS(A/I/O/T)' field in SLURM sinfo output (allocated, idle, other, total)
+
+        '0/40/0/40'
+        """
+        parts = aiot_str.split('/')
+        d = {
+        'allocated': int(parts[0]),
+        'idle': int(parts[1]),
+        'other': int(parts[2]),
+        'total': int(parts[3]),
+        }
+        return(d)
+
+    def is_up(self, reason_str):
+        """
+        Check the 'REASON' field to determine if the node is up or down
+        """
+        if reason_str == 'none':
+            return(True)
+        else:
+            return(False)
+
+            # partition = entry['PARTITION']
+            # num_nodes = entry['NODES']
+            # num_cpus = entry['CPUS']
 #
 #
 #     Examples
