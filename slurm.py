@@ -288,7 +288,7 @@ class Nodes(object):
 #             num_nodes = entry['NODES']
 #             num_cpus = entry['CPUS']
 #
-#             # initialize new dict if not already there
+            # initialize new dict if not already there
 #             if partition not in self.partitions:
 #                 self.partitions[partition] = {}
 #             if state not in self.partitions[partition]:
@@ -315,13 +315,13 @@ class Nodes(object):
 #         """
 #         cpu_usage = list(set([ x["CPUS(A/I/O/T)"].strip() for x in self.nodes[hostname] ]))
 #         parts = cpu_usage[0].split('/')
-#         d = {
-#         'available': parts[0],
-#         'idle': parts[1],
-#         'other': parts[2],
-#         'total': parts[3],
-#         }
-#         return(d)
+        # d = {
+        # 'available': parts[0],
+        # 'idle': parts[1],
+        # 'other': parts[2],
+        # 'total': parts[3],
+        # }
+        # return(d)
 #
 #     def get_sinfo(self):
 #         process = sp.Popen(['sinfo', '-N' , '-o', '%all'], stdout = sp.PIPE, stderr = sp.PIPE, shell = False, universal_newlines = True)
