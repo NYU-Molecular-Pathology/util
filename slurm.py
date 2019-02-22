@@ -200,6 +200,8 @@ class Nodes(object):
             # resources available to the node right now
             if 'avail' not in self.nodes[entry['HOSTNAMES']]:
                 self.nodes[entry['HOSTNAMES']]['avail'] = {}
+            if 'MEMORY' in entry:
+                self.nodes[entry['HOSTNAMES']]['avail']['totalmem'] = entry['MEMORY']
             if 'FREE_MEM' in entry:
                 self.nodes[entry['HOSTNAMES']]['avail']['mem'] = entry['FREE_MEM']
             if 'CPUS(A/I/O/T)' in entry:
@@ -229,7 +231,8 @@ class Nodes(object):
             d['node'] = name
             d['cpu'] = values['avail']['cpus']['idle']
             d['state'] = values['avail']['state']
-            d['mem'] = values['avail']['mem']
+            d['freemem'] = values['avail']['mem']
+            d['totalmem'] = values['avail']['totalmem']
             d['partitions'] = ','.join(values['avail']['partitions'])
             if 'allocmem' in values['avail']:
                 d['allocmem'] = values['avail']['allocmem']
