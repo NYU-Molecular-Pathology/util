@@ -3,3 +3,5 @@
 venv/
 activate
 conda
+fixtures/foo*
+fixtures/test_dump.csv
